@@ -1,0 +1,83 @@
+# Cross-cutting developer tools.
+
+[[rule]]
+id = "go-build-cache"
+name = "Go build cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on go build"
+explanation = "Compiled Go packages; equivalent to `go clean -cache`."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/go-build"
+
+[[rule]]
+id = "go-build-cache-linux"
+name = "Go build cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on go build"
+explanation = "Compiled Go packages; equivalent to `go clean -cache`."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/go-build"
+
+[[rule]]
+id = "go-module-cache"
+name = "Go module cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "go mod download"
+explanation = "Downloaded Go modules; re-fetched per project on demand."
+
+[rule.match]
+home_path = "go/pkg/mod"
+
+[[rule]]
+id = "pub-cache"
+name = "Dart/Flutter pub cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "dart pub get / flutter pub get"
+explanation = "Downloaded Dart and Flutter packages; restored from lockfiles on demand."
+
+[rule.match]
+home_path = ".pub-cache"
+
+[[rule]]
+id = "jetbrains-caches"
+name = "JetBrains IDE caches"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "IDEs re-index on next launch"
+explanation = "Indexes and caches for IntelliJ-family IDEs. Safe to clear; the next launch re-indexes open projects (can take a while)."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/JetBrains"
+
+[[rule]]
+id = "jetbrains-caches-linux"
+name = "JetBrains IDE caches"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "IDEs re-index on next launch"
+explanation = "Indexes and caches for IntelliJ-family IDEs. Safe to clear; the next launch re-indexes open projects (can take a while)."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/JetBrains"
+
+[[rule]]
+id = "docker-desktop-vm"
+name = "Docker Desktop disk image"
+category = "Containers & VMs"
+regenerability = "review"
+regenerate_with = "docker system prune"
+explanation = "Docker Desktop's VM disk holding ALL images, containers, and volumes. Don't delete the file directly — reclaim space with `docker system prune` or Docker Desktop's settings."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Containers/com.docker.docker/Data/vms"

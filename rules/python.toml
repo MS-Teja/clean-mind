@@ -1,0 +1,84 @@
+# Python ecosystem.
+
+[[rule]]
+id = "pycache"
+name = "Python bytecode cache"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "recreated automatically when Python runs"
+explanation = "Compiled .pyc bytecode Python regenerates transparently on the next run."
+
+[rule.match]
+dir_name = "__pycache__"
+
+[[rule]]
+id = "python-venv"
+name = "Python virtual environment"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "python -m venv .venv && pip install -r requirements.txt"
+explanation = "An isolated interpreter plus installed packages, fully reproducible from the project's dependency files."
+
+[rule.match]
+dir_name = ".venv"
+siblings = ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"]
+
+[[rule]]
+id = "pip-cache"
+name = "pip download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on pip install"
+explanation = "Wheels and downloads pip keeps to speed up installs; re-downloaded on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/pip"
+
+[[rule]]
+id = "pip-cache-linux"
+name = "pip download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on pip install"
+explanation = "Wheels and downloads pip keeps to speed up installs; re-downloaded on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/pip"
+
+[[rule]]
+id = "pip-cache-windows"
+name = "pip download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on pip install"
+explanation = "Wheels and downloads pip keeps to speed up installs; re-downloaded on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/pip/cache"
+
+[[rule]]
+id = "uv-cache"
+name = "uv cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on uv sync"
+explanation = "uv's global wheel and source cache; rebuilt on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/uv"
+
+[[rule]]
+id = "uv-cache-linux"
+name = "uv cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on uv sync"
+explanation = "uv's global wheel and source cache; rebuilt on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/uv"

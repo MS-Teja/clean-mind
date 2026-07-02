@@ -6,41 +6,156 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`
+// These functions are ignored because they are not marked as `pub`: `snapshot`, `to_fs_node`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
 
-/// Scan a directory tree and return aggregate counts and allocated size.
-/// Runs on a worker thread; the UI thread is never blocked.
-Future<ScanSummary> scanSummary({required String path}) =>
-    RustLib.instance.api.crateApiScanScanSummary(path: path);
+/// Start a scan. Progress streams every ~120ms; the final item carries
+/// `stage: Done` (with the root id) / `Cancelled` / `Failed`.
+Stream<ScanProgress> startScan({required String path}) =>
+    RustLib.instance.api.crateApiScanStartScan(path: path);
+
+Future<void> cancelScan() => RustLib.instance.api.crateApiScanCancelScan();
+
+FsNode? getNode({required PlatformInt64 id}) =>
+    RustLib.instance.api.crateApiScanGetNode(id: id);
+
+/// Children of `id`, largest first. At most `limit` real entries; anything
+/// beyond folds into a trailing `Rest` node so the UI stays bounded.
+List<FsNode> getChildren({
+  required PlatformInt64 id,
+  required PlatformInt64 limit,
+}) => RustLib.instance.api.crateApiScanGetChildren(id: id, limit: limit);
 
 /// Home directory of the current user, the default scan root.
 String defaultScanRoot() => RustLib.instance.api.crateApiScanDefaultScanRoot();
 
-/// Aggregate result of a scan, mirrored into Dart by flutter_rust_bridge.
-class ScanSummary {
-  final BigInt files;
-  final BigInt dirs;
-  final BigInt totalBytes;
-  final BigInt errors;
+enum FsKind {
+  dir,
+  file,
 
-  const ScanSummary({
-    required this.files,
-    required this.dirs,
-    required this.totalBytes,
-    required this.errors,
+  /// Aggregate of one directory's files below the detail threshold.
+  smallFiles,
+
+  /// Aggregate tail of children beyond the requested limit.
+  rest,
+}
+
+class FsNode {
+  final PlatformInt64 id;
+  final String name;
+  final String path;
+  final FsKind kind;
+  final PlatformInt64 size;
+  final PlatformInt64 mtime;
+  final PlatformInt64 fileCount;
+  final PlatformInt64 dirCount;
+  final PlatformInt64 itemCount;
+  final PlatformInt64 childCount;
+  final FsTier tier;
+  final String? ruleId;
+  final String? ruleName;
+  final String? category;
+
+  const FsNode({
+    required this.id,
+    required this.name,
+    required this.path,
+    required this.kind,
+    required this.size,
+    required this.mtime,
+    required this.fileCount,
+    required this.dirCount,
+    required this.itemCount,
+    required this.childCount,
+    required this.tier,
+    this.ruleId,
+    this.ruleName,
+    this.category,
   });
 
   @override
   int get hashCode =>
-      files.hashCode ^ dirs.hashCode ^ totalBytes.hashCode ^ errors.hashCode;
+      id.hashCode ^
+      name.hashCode ^
+      path.hashCode ^
+      kind.hashCode ^
+      size.hashCode ^
+      mtime.hashCode ^
+      fileCount.hashCode ^
+      dirCount.hashCode ^
+      itemCount.hashCode ^
+      childCount.hashCode ^
+      tier.hashCode ^
+      ruleId.hashCode ^
+      ruleName.hashCode ^
+      category.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ScanSummary &&
+      other is FsNode &&
           runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          path == other.path &&
+          kind == other.kind &&
+          size == other.size &&
+          mtime == other.mtime &&
+          fileCount == other.fileCount &&
+          dirCount == other.dirCount &&
+          itemCount == other.itemCount &&
+          childCount == other.childCount &&
+          tier == other.tier &&
+          ruleId == other.ruleId &&
+          ruleName == other.ruleName &&
+          category == other.category;
+}
+
+enum FsTier { none, safe, review, protected }
+
+class ScanProgress {
+  final ScanStage stage;
+  final PlatformInt64 files;
+  final PlatformInt64 dirs;
+  final PlatformInt64 bytes;
+  final PlatformInt64 errors;
+  final String currentPath;
+
+  /// Root node id, valid only when `stage == Done`.
+  final PlatformInt64 rootId;
+
+  const ScanProgress({
+    required this.stage,
+    required this.files,
+    required this.dirs,
+    required this.bytes,
+    required this.errors,
+    required this.currentPath,
+    required this.rootId,
+  });
+
+  @override
+  int get hashCode =>
+      stage.hashCode ^
+      files.hashCode ^
+      dirs.hashCode ^
+      bytes.hashCode ^
+      errors.hashCode ^
+      currentPath.hashCode ^
+      rootId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScanProgress &&
+          runtimeType == other.runtimeType &&
+          stage == other.stage &&
           files == other.files &&
           dirs == other.dirs &&
-          totalBytes == other.totalBytes &&
-          errors == other.errors;
+          bytes == other.bytes &&
+          errors == other.errors &&
+          currentPath == other.currentPath &&
+          rootId == other.rootId;
 }
+
+enum ScanStage { scanning, done, cancelled, failed }

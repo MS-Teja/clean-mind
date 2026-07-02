@@ -6,6 +6,9 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/insights.dart';
+import 'api/llm.dart';
+import 'api/ops.dart';
 import 'api/scan.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -21,16 +24,84 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  RustStreamSink<ScanProgress> dco_decode_StreamSink_scan_progress_Sse(
+    dynamic raw,
+  );
+
+  @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  AiRecommendation dco_decode_ai_recommendation(dynamic raw);
+
+  @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
+  FsNode dco_decode_box_autoadd_fs_node(dynamic raw);
+
+  @protected
+  LlmSettings dco_decode_box_autoadd_llm_settings(dynamic raw);
+
+  @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FsKind dco_decode_fs_kind(dynamic raw);
+
+  @protected
+  FsNode dco_decode_fs_node(dynamic raw);
+
+  @protected
+  FsTier dco_decode_fs_tier(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  Insight dco_decode_insight(dynamic raw);
+
+  @protected
+  List<AiRecommendation> dco_decode_list_ai_recommendation(dynamic raw);
+
+  @protected
+  List<FsNode> dco_decode_list_fs_node(dynamic raw);
+
+  @protected
+  List<Insight> dco_decode_list_insight(dynamic raw);
+
+  @protected
+  List<OpOutcome> dco_decode_list_op_outcome(dynamic raw);
+
+  @protected
+  Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  ScanSummary dco_decode_scan_summary(dynamic raw);
+  LlmSettings dco_decode_llm_settings(dynamic raw);
 
   @protected
-  BigInt dco_decode_u_64(dynamic raw);
+  OpOutcome dco_decode_op_outcome(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  FsNode? dco_decode_opt_box_autoadd_fs_node(dynamic raw);
+
+  @protected
+  ScanProgress dco_decode_scan_progress(dynamic raw);
+
+  @protected
+  ScanStage dco_decode_scan_stage(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -39,16 +110,86 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<ScanProgress> sse_decode_StreamSink_scan_progress_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AiRecommendation sse_decode_ai_recommendation(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  FsNode sse_decode_box_autoadd_fs_node(SseDeserializer deserializer);
+
+  @protected
+  LlmSettings sse_decode_box_autoadd_llm_settings(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FsKind sse_decode_fs_kind(SseDeserializer deserializer);
+
+  @protected
+  FsNode sse_decode_fs_node(SseDeserializer deserializer);
+
+  @protected
+  FsTier sse_decode_fs_tier(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  Insight sse_decode_insight(SseDeserializer deserializer);
+
+  @protected
+  List<AiRecommendation> sse_decode_list_ai_recommendation(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<FsNode> sse_decode_list_fs_node(SseDeserializer deserializer);
+
+  @protected
+  List<Insight> sse_decode_list_insight(SseDeserializer deserializer);
+
+  @protected
+  List<OpOutcome> sse_decode_list_op_outcome(SseDeserializer deserializer);
+
+  @protected
+  Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  ScanSummary sse_decode_scan_summary(SseDeserializer deserializer);
+  LlmSettings sse_decode_llm_settings(SseDeserializer deserializer);
 
   @protected
-  BigInt sse_decode_u_64(SseDeserializer deserializer);
+  OpOutcome sse_decode_op_outcome(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  FsNode? sse_decode_opt_box_autoadd_fs_node(SseDeserializer deserializer);
+
+  @protected
+  ScanProgress sse_decode_scan_progress(SseDeserializer deserializer);
+
+  @protected
+  ScanStage sse_decode_scan_stage(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -57,13 +198,82 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
+  void sse_encode_StreamSink_scan_progress_Sse(
+    RustStreamSink<ScanProgress> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ai_recommendation(
+    AiRecommendation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_fs_node(FsNode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_llm_settings(
+    LlmSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fs_kind(FsKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fs_node(FsNode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fs_tier(FsTier self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_insight(Insight self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_ai_recommendation(
+    List<AiRecommendation> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_fs_node(List<FsNode> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_insight(List<Insight> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_op_outcome(
+    List<OpOutcome> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_i_64_strict(
+    Int64List self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -72,22 +282,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_scan_summary(ScanSummary self, SseSerializer serializer);
+  void sse_encode_llm_settings(LlmSettings self, SseSerializer serializer);
 
   @protected
-  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+  void sse_encode_op_outcome(OpOutcome self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_fs_node(
+    FsNode? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_scan_progress(ScanProgress self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_scan_stage(ScanStage self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class

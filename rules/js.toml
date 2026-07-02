@@ -1,0 +1,111 @@
+# JavaScript / Node.js ecosystem.
+# Schema: see rust/src/rules/mod.rs (Rule / MatchSpec). One matcher per rule:
+# either `dir_name` (+ optional `siblings` project markers) or `home_path`
+# (relative to the user's home, always /-separated).
+
+[[rule]]
+id = "node-modules"
+name = "Node.js dependencies"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "npm install"
+explanation = "Third-party packages your package manager restores exactly from the lockfile. Deleting loses nothing; reinstalling takes a few minutes."
+
+[rule.match]
+dir_name = "node_modules"
+siblings = ["package.json"]
+
+[[rule]]
+id = "next-build"
+name = "Next.js build output"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "next build"
+explanation = "Compiled output Next.js fully regenerates on the next build or dev run."
+
+[rule.match]
+dir_name = ".next"
+siblings = ["package.json"]
+
+[[rule]]
+id = "npm-cache"
+name = "npm download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on npm install"
+explanation = "Tarballs npm keeps to avoid re-downloading. Safe to clear; future installs re-download what they need."
+platforms = ["macos", "linux"]
+
+[rule.match]
+home_path = ".npm/_cacache"
+
+[[rule]]
+id = "npm-cache-windows"
+name = "npm download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on npm install"
+explanation = "Tarballs npm keeps to avoid re-downloading. Safe to clear; future installs re-download what they need."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/npm-cache"
+
+[[rule]]
+id = "yarn-cache"
+name = "Yarn cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on yarn install"
+explanation = "Yarn's global package cache; rebuilt on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/Yarn"
+
+[[rule]]
+id = "yarn-cache-linux"
+name = "Yarn cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on yarn install"
+explanation = "Yarn's global package cache; rebuilt on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/yarn"
+
+[[rule]]
+id = "pnpm-store"
+name = "pnpm content store"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "pnpm install re-downloads on demand"
+explanation = "pnpm's content-addressable store. Projects hard-link into it, so active projects may briefly reinstall after clearing."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/pnpm/store"
+
+[[rule]]
+id = "pnpm-store-linux"
+name = "pnpm content store"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "pnpm install re-downloads on demand"
+explanation = "pnpm's content-addressable store. Projects hard-link into it, so active projects may briefly reinstall after clearing."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".local/share/pnpm/store"
+
+[[rule]]
+id = "bun-cache"
+name = "Bun install cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on bun install"
+explanation = "Bun's global download cache; rebuilt on demand."
+
+[rule.match]
+home_path = ".bun/install/cache"

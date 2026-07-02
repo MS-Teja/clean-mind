@@ -1,0 +1,35 @@
+# JVM ecosystem (Gradle, Maven).
+
+[[rule]]
+id = "gradle-build"
+name = "Gradle build directory"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "./gradlew build"
+explanation = "Compiled classes and packaged outputs Gradle regenerates from source."
+
+[rule.match]
+dir_name = "build"
+siblings = ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]
+
+[[rule]]
+id = "gradle-caches"
+name = "Gradle caches"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on the next Gradle build"
+explanation = "Downloaded dependencies and build caches; Gradle re-downloads on demand. First build afterwards is slower."
+
+[rule.match]
+home_path = ".gradle/caches"
+
+[[rule]]
+id = "maven-repository"
+name = "Maven local repository"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "mvn dependency:resolve"
+explanation = "Downloaded artifacts in ~/.m2; Maven re-fetches what builds need. Locally-installed snapshots (mvn install) would need re-installing."
+
+[rule.match]
+home_path = ".m2/repository"

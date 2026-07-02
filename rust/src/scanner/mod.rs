@@ -1,72 +1,430 @@
-use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::HashSet;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Mutex, RwLock};
+use std::time::UNIX_EPOCH;
 
-/// Aggregate result of walking a directory tree.
-#[derive(Debug, Clone, Default)]
-pub struct ScanTotals {
-    pub files: u64,
-    pub dirs: u64,
-    /// Allocated size on disk where the platform reports it (Unix); logical size otherwise.
-    pub total_bytes: u64,
-    /// Entries that could not be read (permissions, races). Scanning never aborts on these.
-    pub errors: u64,
+use rayon::prelude::*;
+
+use crate::rules::{Regenerability, RuleSet};
+use crate::safety;
+
+/// Files smaller than this fold into one "(small files)" node per directory,
+/// keeping the tree small enough to hold and ship to the UI.
+pub const SMALL_FILE_THRESHOLD: u64 = 1_000_000;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeKind {
+    Dir,
+    File,
+    /// Aggregate of a directory's files below [`SMALL_FILE_THRESHOLD`].
+    SmallFiles,
 }
 
-/// Walk `root` in parallel and aggregate counts and sizes.
-///
-/// Symlinks are counted but never followed, so a cycle cannot occur and
-/// sizes are not double-counted through links.
-pub fn scan_summary(root: &Path) -> ScanTotals {
-    let files = AtomicU64::new(0);
-    let dirs = AtomicU64::new(0);
-    let total_bytes = AtomicU64::new(0);
-    let errors = AtomicU64::new(0);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tier {
+    /// Not flagged by anything.
+    None,
+    /// Confirmed regenerable by the rules engine — safe to reclaim.
+    Safe,
+    /// Flagged, but a human should look first.
+    Review,
+    /// Hard denylist. Deletion is refused at every layer.
+    Protected,
+}
 
-    for entry in jwalk::WalkDir::new(root)
-        .follow_links(false)
-        .skip_hidden(false)
-    {
-        match entry {
-            Ok(entry) => {
-                let file_type = entry.file_type();
-                if file_type.is_dir() {
-                    dirs.fetch_add(1, Ordering::Relaxed);
-                } else {
-                    files.fetch_add(1, Ordering::Relaxed);
-                    match entry.metadata() {
-                        Ok(meta) => {
-                            total_bytes.fetch_add(allocated_size(&meta), Ordering::Relaxed);
-                        }
-                        Err(_) => {
-                            errors.fetch_add(1, Ordering::Relaxed);
+#[derive(Debug)]
+pub struct Node {
+    pub name: String,
+    pub kind: NodeKind,
+    pub size: u64,
+    pub mtime: i64,
+    pub parent: Option<u32>,
+    /// Sorted by size, descending.
+    pub children: Vec<u32>,
+    pub file_count: u64,
+    pub dir_count: u64,
+    /// For `SmallFiles`: how many files were folded in.
+    pub item_count: u64,
+    pub rule: Option<u16>,
+    pub tier: Tier,
+}
+
+pub struct ScanStore {
+    pub root_path: PathBuf,
+    pub nodes: Vec<Node>,
+    pub root: u32,
+    pub errors: u64,
+    pub rules: RuleSet,
+}
+
+impl ScanStore {
+    pub fn node(&self, id: u32) -> Option<&Node> {
+        self.nodes.get(id as usize)
+    }
+
+    pub fn path_of(&self, id: u32) -> PathBuf {
+        let mut names = Vec::new();
+        let mut cur = Some(id);
+        while let Some(i) = cur {
+            let n = &self.nodes[i as usize];
+            if n.parent.is_some() {
+                names.push(n.name.clone());
+            }
+            cur = n.parent;
+        }
+        let mut p = self.root_path.clone();
+        for name in names.iter().rev() {
+            p.push(name);
+        }
+        p
+    }
+
+    /// Path relative to the scan root, `/`-separated, for display and LLM digests.
+    pub fn rel_path_of(&self, id: u32) -> String {
+        let mut names = Vec::new();
+        let mut cur = Some(id);
+        while let Some(i) = cur {
+            let n = &self.nodes[i as usize];
+            if n.parent.is_some() {
+                names.push(n.name.clone());
+            }
+            cur = n.parent;
+        }
+        names.reverse();
+        names.join("/")
+    }
+}
+
+/// The one scan the app holds at a time. Fresh scan on every launch; nothing
+/// is ever persisted to disk.
+pub static STORE: RwLock<Option<ScanStore>> = RwLock::new(None);
+
+#[derive(Default)]
+pub struct ProgressCounters {
+    pub files: AtomicU64,
+    pub dirs: AtomicU64,
+    pub bytes: AtomicU64,
+    pub errors: AtomicU64,
+    pub cancel: AtomicBool,
+    pub current: Mutex<String>,
+}
+
+struct ScanCtx<'a> {
+    rules: &'a RuleSet,
+    progress: &'a ProgressCounters,
+    hardlinks: Mutex<HashSet<(u64, u64)>>,
+}
+
+struct TmpNode {
+    name: String,
+    kind: NodeKind,
+    size: u64,
+    mtime: i64,
+    file_count: u64,
+    dir_count: u64,
+    item_count: u64,
+    rule: Option<u16>,
+    children: Vec<TmpNode>,
+}
+
+impl TmpNode {
+    fn dir(name: String, mtime: i64, rule: Option<u16>) -> Self {
+        Self {
+            name,
+            kind: NodeKind::Dir,
+            size: 0,
+            mtime,
+            file_count: 0,
+            dir_count: 0,
+            item_count: 0,
+            rule,
+            children: Vec::new(),
+        }
+    }
+}
+
+/// Walk `root` in parallel and build the scan tree. Returns `None` if cancelled.
+pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> Option<ScanStore> {
+    let ctx = ScanCtx {
+        rules: &rules,
+        progress,
+        hardlinks: Mutex::new(HashSet::new()),
+    };
+    let root_mtime = fs::symlink_metadata(root)
+        .map(|m| mtime_of(&m))
+        .unwrap_or(0);
+    let name = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| root.to_string_lossy().into_owned());
+    let tmp = walk(root, name, root_mtime, None, false, &ctx);
+    if progress.cancel.load(Ordering::Relaxed) {
+        return None;
+    }
+
+    let mut nodes = Vec::new();
+    flatten(tmp, None, &mut nodes);
+    let mut store = ScanStore {
+        root_path: root.to_path_buf(),
+        nodes,
+        root: 0,
+        errors: progress.errors.load(Ordering::Relaxed),
+        rules,
+    };
+    finalize(&mut store);
+    Some(store)
+}
+
+fn walk(
+    path: &Path,
+    name: String,
+    mtime: i64,
+    rule: Option<u16>,
+    in_matched: bool,
+    ctx: &ScanCtx,
+) -> TmpNode {
+    let mut node = TmpNode::dir(name, mtime, rule);
+    if ctx.progress.cancel.load(Ordering::Relaxed) {
+        return node;
+    }
+    if let Ok(mut cur) = ctx.progress.current.lock() {
+        *cur = path.to_string_lossy().into_owned();
+    }
+
+    let read = match fs::read_dir(path) {
+        Ok(r) => r,
+        Err(_) => {
+            ctx.progress.errors.fetch_add(1, Ordering::Relaxed);
+            return node;
+        }
+    };
+
+    let mut names: HashSet<String> = HashSet::new();
+    let mut files = Vec::new();
+    let mut dirs: Vec<(String, PathBuf, i64)> = Vec::new();
+    for entry in read {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => {
+                ctx.progress.errors.fetch_add(1, Ordering::Relaxed);
+                continue;
+            }
+        };
+        let file_type = match entry.file_type() {
+            Ok(t) => t,
+            Err(_) => {
+                ctx.progress.errors.fetch_add(1, Ordering::Relaxed);
+                continue;
+            }
+        };
+        let entry_name = entry.file_name().to_string_lossy().into_owned();
+        names.insert(entry_name.clone());
+        if file_type.is_dir() {
+            // DirEntry::metadata does not traverse symlinks, so `is_dir` here
+            // means a real directory — symlinks to dirs land in the file arm.
+            let m = entry.metadata().map(|m| mtime_of(&m)).unwrap_or(0);
+            dirs.push((entry_name, entry.path(), m));
+        } else {
+            files.push((entry_name, entry));
+        }
+    }
+
+    let mut small_sum: u64 = 0;
+    let mut small_count: u64 = 0;
+    for (file_name, entry) in files {
+        let meta = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => {
+                ctx.progress.errors.fetch_add(1, Ordering::Relaxed);
+                continue;
+            }
+        };
+        let mut size = allocated_size(&meta);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if meta.nlink() > 1 {
+                let key = (meta.dev(), meta.ino());
+                if !ctx.hardlinks.lock().unwrap().insert(key) {
+                    size = 0; // already counted through another link
+                }
+            }
+        }
+        ctx.progress.files.fetch_add(1, Ordering::Relaxed);
+        ctx.progress.bytes.fetch_add(size, Ordering::Relaxed);
+        node.file_count += 1;
+        if size >= SMALL_FILE_THRESHOLD {
+            node.children.push(TmpNode {
+                name: file_name,
+                kind: NodeKind::File,
+                size,
+                mtime: mtime_of(&meta),
+                file_count: 1,
+                dir_count: 0,
+                item_count: 0,
+                rule: None,
+                children: Vec::new(),
+            });
+        } else {
+            small_sum += size;
+            small_count += 1;
+        }
+    }
+    if small_count > 0 {
+        node.children.push(TmpNode {
+            name: String::from("(small files)"),
+            kind: NodeKind::SmallFiles,
+            size: small_sum,
+            mtime: 0,
+            file_count: small_count,
+            dir_count: 0,
+            item_count: small_count,
+            rule: None,
+            children: Vec::new(),
+        });
+    }
+
+    let matched_here = in_matched || rule.is_some();
+    let mut sub: Vec<TmpNode> = dirs
+        .into_par_iter()
+        .map(|(dir_name, dir_path, dir_mtime)| {
+            let r = if matched_here {
+                None
+            } else {
+                ctx.rules.match_dir(&dir_name, &names)
+            };
+            walk(
+                &dir_path,
+                dir_name,
+                dir_mtime,
+                r,
+                matched_here || r.is_some(),
+                ctx,
+            )
+        })
+        .collect();
+    for s in &sub {
+        node.dir_count += 1 + s.dir_count;
+        node.file_count += s.file_count;
+    }
+    node.children.append(&mut sub);
+    node.size = node.children.iter().map(|c| c.size).sum();
+    ctx.progress.dirs.fetch_add(1, Ordering::Relaxed);
+    node
+}
+
+fn flatten(tmp: TmpNode, parent: Option<u32>, nodes: &mut Vec<Node>) -> u32 {
+    let id = nodes.len() as u32;
+    nodes.push(Node {
+        name: tmp.name,
+        kind: tmp.kind,
+        size: tmp.size,
+        mtime: tmp.mtime,
+        parent,
+        children: Vec::new(),
+        file_count: tmp.file_count,
+        dir_count: tmp.dir_count,
+        item_count: tmp.item_count,
+        rule: tmp.rule,
+        tier: Tier::None,
+    });
+    let mut children = tmp.children;
+    children.sort_by_key(|c| std::cmp::Reverse(c.size));
+    let child_ids: Vec<u32> = children
+        .into_iter()
+        .map(|c| flatten(c, Some(id), nodes))
+        .collect();
+    nodes[id as usize].children = child_ids;
+    id
+}
+
+/// Post-passes that need full paths: home-relative rule matching, tier
+/// assignment, and the protected denylist (which overrides everything).
+fn finalize(store: &mut ScanStore) {
+    let home = dirs::home_dir();
+
+    // Home-relative rules (caches at fixed locations).
+    if let Some(home) = &home {
+        let rules: Vec<(u16, String)> = store
+            .rules
+            .home_path_rules()
+            .map(|(i, p)| (i, p.to_string()))
+            .collect();
+        for (rule_idx, rel) in rules {
+            let target = home.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+            if let Ok(remainder) = target.strip_prefix(&store.root_path) {
+                let mut cur = store.root;
+                let mut found = true;
+                for comp in remainder.components() {
+                    let want = comp.as_os_str().to_string_lossy();
+                    let next = store.nodes[cur as usize]
+                        .children
+                        .iter()
+                        .copied()
+                        .find(|&c| store.nodes[c as usize].name == want);
+                    match next {
+                        Some(n) => cur = n,
+                        None => {
+                            found = false;
+                            break;
                         }
                     }
                 }
-            }
-            Err(_) => {
-                errors.fetch_add(1, Ordering::Relaxed);
+                if found && cur != store.root && store.nodes[cur as usize].rule.is_none() {
+                    store.nodes[cur as usize].rule = Some(rule_idx);
+                }
             }
         }
     }
 
-    ScanTotals {
-        files: files.load(Ordering::Relaxed),
-        dirs: dirs.load(Ordering::Relaxed),
-        total_bytes: total_bytes.load(Ordering::Relaxed),
-        errors: errors.load(Ordering::Relaxed),
+    // Tier from rules, then protected pass (DFS with path building).
+    for i in 0..store.nodes.len() {
+        if let Some(r) = store.nodes[i].rule {
+            store.nodes[i].tier = match store.rules.rules[r as usize].regenerability {
+                Regenerability::Regenerable | Regenerability::Cache => Tier::Safe,
+                Regenerability::Review => Tier::Review,
+            };
+        }
     }
+    let mut stack: Vec<(u32, PathBuf, bool)> = vec![(store.root, store.root_path.clone(), false)];
+    while let Some((id, path, parent_protected)) = stack.pop() {
+        let is_protected =
+            parent_protected || safety::protected_reason(&path, home.as_deref()).is_some();
+        if is_protected {
+            store.nodes[id as usize].tier = Tier::Protected;
+        }
+        for &c in store.nodes[id as usize].children.clone().iter() {
+            let child = &store.nodes[c as usize];
+            if child.kind == NodeKind::Dir {
+                let child_path = path.join(&child.name);
+                stack.push((c, child_path, is_protected));
+            } else if is_protected {
+                store.nodes[c as usize].tier = Tier::Protected;
+            }
+        }
+    }
+}
+
+fn mtime_of(meta: &fs::Metadata) -> i64 {
+    meta.modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 /// Size actually allocated on disk. On APFS, clones and sparse files make the
 /// logical length misleading, so prefer the block count where available.
 #[cfg(unix)]
-fn allocated_size(meta: &std::fs::Metadata) -> u64 {
+fn allocated_size(meta: &fs::Metadata) -> u64 {
     use std::os::unix::fs::MetadataExt;
     meta.blocks() * 512
 }
 
 #[cfg(not(unix))]
-fn allocated_size(meta: &std::fs::Metadata) -> u64 {
+fn allocated_size(meta: &fs::Metadata) -> u64 {
     meta.len()
 }
 
@@ -75,44 +433,96 @@ mod tests {
     use super::*;
     use std::fs;
 
-    #[test]
-    fn counts_files_dirs_and_bytes() {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = tmp.path();
-        fs::create_dir(root.join("a")).unwrap();
-        fs::create_dir(root.join("a/b")).unwrap();
-        fs::write(root.join("a/one.txt"), vec![0u8; 4096]).unwrap();
-        fs::write(root.join("a/b/two.txt"), vec![0u8; 4096]).unwrap();
+    fn scan_fixture(root: &Path) -> ScanStore {
+        let progress = ProgressCounters::default();
+        scan(root, RuleSet::builtin(), &progress).unwrap()
+    }
 
-        let summary = scan_summary(root);
-        assert_eq!(summary.files, 2);
-        // root + a + a/b
-        assert_eq!(summary.dirs, 3);
-        assert!(summary.total_bytes >= 8192);
-        assert_eq!(summary.errors, 0);
+    fn write_bytes(path: &Path, n: usize) {
+        fs::write(path, vec![0u8; n]).unwrap();
     }
 
     #[test]
-    fn does_not_follow_symlinks() {
+    fn builds_tree_with_folded_small_files() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
-        fs::create_dir(root.join("real")).unwrap();
-        fs::write(root.join("real/data.bin"), vec![0u8; 4096]).unwrap();
-        #[cfg(unix)]
-        std::os::unix::fs::symlink(root.join("real"), root.join("link")).unwrap();
+        fs::create_dir(root.join("big")).unwrap();
+        write_bytes(&root.join("big/large.bin"), 2_000_000);
+        write_bytes(&root.join("big/tiny1.txt"), 10);
+        write_bytes(&root.join("big/tiny2.txt"), 10);
 
-        let summary = scan_summary(root);
-        // data.bin counted once; the symlink itself counts as a file entry, not a dir.
-        #[cfg(unix)]
-        assert_eq!(summary.files, 2);
-        #[cfg(unix)]
-        assert_eq!(summary.dirs, 2);
+        let store = scan_fixture(root);
+        let root_node = store.node(store.root).unwrap();
+        assert_eq!(root_node.kind, NodeKind::Dir);
+        assert_eq!(root_node.file_count, 3);
+
+        let big = *root_node.children.first().unwrap();
+        let big_node = store.node(big).unwrap();
+        assert_eq!(big_node.name, "big");
+        // children: large.bin + (small files); sorted by size desc
+        assert_eq!(big_node.children.len(), 2);
+        let first = store.node(big_node.children[0]).unwrap();
+        assert_eq!(first.name, "large.bin");
+        assert!(first.size >= 2_000_000);
+        let small = store.node(big_node.children[1]).unwrap();
+        assert_eq!(small.kind, NodeKind::SmallFiles);
+        assert_eq!(small.item_count, 2);
+        assert_eq!(
+            store.path_of(big_node.children[0]),
+            root.join("big/large.bin")
+        );
     }
 
     #[test]
-    fn missing_root_reports_error_not_panic() {
-        let summary = scan_summary(Path::new("/definitely/not/a/real/path"));
-        assert_eq!(summary.files, 0);
-        assert_eq!(summary.errors, 1);
+    fn matches_node_modules_rule_and_suppresses_nested() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let proj = root.join("myapp");
+        fs::create_dir_all(proj.join("node_modules/dep/node_modules/inner")).unwrap();
+        fs::write(proj.join("package.json"), "{}").unwrap();
+        fs::write(proj.join("node_modules/dep/package.json"), "{}").unwrap();
+        write_bytes(&proj.join("node_modules/dep/big.js"), 1_500_000);
+
+        let store = scan_fixture(root);
+        let matched: Vec<&Node> = store.nodes.iter().filter(|n| n.rule.is_some()).collect();
+        assert_eq!(
+            matched.len(),
+            1,
+            "nested node_modules must not double-match"
+        );
+        assert_eq!(matched[0].name, "node_modules");
+        assert_eq!(matched[0].tier, Tier::Safe);
+    }
+
+    #[test]
+    fn target_without_cargo_toml_not_matched() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("photos/target")).unwrap();
+        write_bytes(&root.join("photos/target/img.raw"), 1_200_000);
+
+        let store = scan_fixture(root);
+        assert!(store.nodes.iter().all(|n| n.rule.is_none()));
+    }
+
+    #[test]
+    fn cancel_returns_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        let progress = ProgressCounters::default();
+        progress.cancel.store(true, Ordering::Relaxed);
+        assert!(scan(tmp.path(), RuleSet::builtin(), &progress).is_none());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn hardlinks_counted_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_bytes(&root.join("a.bin"), 3_000_000);
+        fs::hard_link(root.join("a.bin"), root.join("b.bin")).unwrap();
+
+        let store = scan_fixture(root);
+        let root_node = store.node(store.root).unwrap();
+        assert!(root_node.size < 6_000_000, "hardlinked file double-counted");
     }
 }

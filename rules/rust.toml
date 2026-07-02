@@ -1,0 +1,24 @@
+# Rust ecosystem.
+
+[[rule]]
+id = "cargo-target"
+name = "Cargo build directory"
+category = "Project build artifacts"
+regenerability = "regenerable"
+regenerate_with = "cargo build"
+explanation = "Compiled artifacts cargo fully rebuilds from source. Often the single largest thing in a Rust project."
+
+[rule.match]
+dir_name = "target"
+siblings = ["Cargo.toml"]
+
+[[rule]]
+id = "cargo-registry"
+name = "Cargo registry cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on cargo build"
+explanation = "Downloaded crate sources and archives; cargo re-fetches what projects need."
+
+[rule.match]
+home_path = ".cargo/registry"

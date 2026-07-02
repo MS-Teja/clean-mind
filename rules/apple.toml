@@ -1,0 +1,72 @@
+# Apple developer tooling (all macOS-only).
+
+[[rule]]
+id = "xcode-derived-data"
+name = "Xcode DerivedData"
+category = "IDE & build caches"
+regenerability = "regenerable"
+regenerate_with = "Xcode rebuilds it on the next build"
+explanation = "Xcode's intermediate build products and indexes. Notorious disk hog; regenerated automatically."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Developer/Xcode/DerivedData"
+
+[[rule]]
+id = "xcode-archives"
+name = "Xcode Archives"
+category = "IDE & build caches"
+regenerability = "review"
+explanation = "App archives with dSYM debug symbols. If you distributed these builds, you may need the dSYMs to symbolicate crash reports — review before deleting."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Developer/Xcode/Archives"
+
+[[rule]]
+id = "coresimulator-caches"
+name = "iOS Simulator caches"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "recreated automatically by the simulator"
+explanation = "Simulator runtime caches; rebuilt on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Developer/CoreSimulator/Caches"
+
+[[rule]]
+id = "coresimulator-devices"
+name = "iOS Simulator devices"
+category = "IDE & build caches"
+regenerability = "review"
+regenerate_with = "xcrun simctl delete unavailable"
+explanation = "Simulator devices and their data. Prefer `xcrun simctl delete unavailable` so CoreSimulator stays consistent; deleting files directly can confuse it."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Developer/CoreSimulator/Devices"
+
+[[rule]]
+id = "cocoapods-cache"
+name = "CocoaPods cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "pod install re-downloads on demand"
+explanation = "Downloaded pod sources; re-fetched when projects need them."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/CocoaPods"
+
+[[rule]]
+id = "homebrew-cache"
+name = "Homebrew download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "brew re-downloads on demand"
+explanation = "Bottle and source downloads Homebrew keeps; safe to clear (same as `brew cleanup --prune=all`)."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/Homebrew"
