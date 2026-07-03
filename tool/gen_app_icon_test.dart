@@ -1,21 +1,34 @@
 // Not part of the test suite (lives outside test/). Regenerates the macOS
-// app icon from the landing-screen radar motif:
+// app icon from the landing-screen hero mark (_OrbitHero / _OrbitPainter in
+// lib/features/scan/scan_screen.dart), frozen at t = 0 and upscaled 6.3x:
 //
 //   flutter test tool/gen_app_icon_test.dart
 //   then resize into macos/Runner/Assets.xcassets/AppIcon.appiconset (sips).
 //
-// Drawing it in Dart keeps the icon reproducible without a design tool.
+// Drawing it in Dart keeps the icon reproducible without a design tool, and
+// pixel-faithful to what actually renders on the landing screen.
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _emerald = Color(0xFF3ADFB4);
 
 void main() {
   test('render app icon to PNG', () async {
+    // Load the Material Icons font so Icons.radar_rounded can be painted as
+    // real text (TextPainter can't render glyphs from an unloaded font).
+    final flutterRoot =
+        Platform.environment['FLUTTER_ROOT'] ?? '/Users/teja/Development/flutter';
+    final fontFile = File(
+        '$flutterRoot/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+    final loader = FontLoader('MaterialIcons')
+      ..addFont(Future.value(fontFile.readAsBytesSync().buffer.asByteData()));
+    await loader.load();
+
     const size = 1024.0;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -57,12 +70,17 @@ void main() {
         ..color = Colors.white.withValues(alpha: 0.06),
     );
 
-    // Orbit arcs, frozen at the landing hero's pose.
-    const alphas = [0.85, 0.4, 0.2];
-    const phases = [0.62, 0.9, 0.22]; // turns
+    // --- Landing hero (_OrbitHero / _OrbitPainter), frozen at t = 0 and
+    // upscaled 6.3x (units -> px) around the tile/canvas center. ---
+    const scale = 6.3;
+
+    // Orbit arcs: _OrbitPainter draws 3 stroked arcs, radii
+    // (size/2 - 2 - i*9) for a 104x104 box, i.e. 50/41/32 units.
+    const alphas = [0.8, 0.35, 0.18];
+    const phases = [0.0, 0.28, 0.6]; // turns; speeds don't matter at t = 0
     const sweeps = [130.0, 190.0, 95.0]; // degrees
     for (var i = 0; i < 3; i++) {
-      final radius = 318.0 - i * 40;
+      final radius = (50.0 - i * 9) * scale;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         phases[i] * 2 * math.pi,
@@ -71,72 +89,34 @@ void main() {
         Paint()
           ..color = _emerald.withValues(alpha: alphas[i])
           ..style = PaintingStyle.stroke
+          // Not scaled linearly with `scale` (that would be ~12.6px) — 26px
+          // keeps the arcs legible at small icon sizes.
           ..strokeWidth = 26
           ..strokeCap = StrokeCap.round,
       );
     }
 
-    // Center disc with the radar sweep.
-    canvas.drawCircle(center, 176, Paint()..color = const Color(0xFF163227));
+    // Center disc (56x56 -> radius 28 units) holding the radar glyph.
     canvas.drawCircle(
       center,
-      130,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..color = _emerald.withValues(alpha: 0.9),
+      28 * scale,
+      Paint()..color = const Color(0xFF163227),
     );
-    for (final f in [0.66, 0.33]) {
-      canvas.drawCircle(
-        center,
-        130 * f,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 6
-          ..color = _emerald.withValues(alpha: 0.28),
-      );
-    }
-    const lead = -math.pi / 4; // needle to the upper right
-    const sweep = math.pi * 0.6;
-    final rect = Rect.fromCircle(center: center, radius: 126);
-    canvas.drawArc(
-      rect,
-      lead - sweep,
-      sweep,
-      true,
-      Paint()
-        ..shader = ui.Gradient.sweep(
-          center,
-          [
-            _emerald.withValues(alpha: 0),
-            _emerald.withValues(alpha: 0.18),
-            _emerald.withValues(alpha: 0.5),
-          ],
-          [0.0, 0.6 * sweep / (2 * math.pi), sweep / (2 * math.pi)],
-          TileMode.clamp,
-          lead - sweep,
-          lead,
+
+    // Icons.radar_rounded, painted as real text via the loaded Material
+    // Icons font (fontSize 34 units -> 34 * 6.3 = 214px).
+    final tp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.radar_rounded.codePoint),
+        style: const TextStyle(
+          fontFamily: 'MaterialIcons',
+          fontSize: 34 * scale,
+          color: _emerald,
         ),
-    );
-    final tipDir = Offset(math.cos(lead), math.sin(lead));
-    final tip = center + tipDir * 122;
-    canvas.drawLine(
-      center,
-      tip,
-      Paint()
-        ..color = _emerald
-        ..strokeWidth = 10
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawCircle(
-      tip,
-      26,
-      Paint()
-        ..color = _emerald.withValues(alpha: 0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
-    );
-    canvas.drawCircle(tip, 15, Paint()..color = _emerald);
-    canvas.drawCircle(center, 13, Paint()..color = _emerald);
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
 
     final image =
         await recorder.endRecording().toImage(size.toInt(), size.toInt());
