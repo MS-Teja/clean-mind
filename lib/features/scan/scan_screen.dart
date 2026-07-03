@@ -480,31 +480,55 @@ class _RadarPainter extends CustomPainter {
         center,
         radius * fraction,
         Paint()
-          ..color = primary.withValues(alpha: 0.15)
+          ..color = primary.withValues(alpha: 0.22)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1,
       );
     }
 
-    final startAngle = t * 2 * math.pi;
-    const sweep = math.pi / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    // Sweep wedge: brightest at the leading edge, fading out over the tail
+    // behind it (a gradient across the full circle would leave the wedge
+    // almost uniformly bright, with a hard cut at both edges).
+    final lead = t * 2 * math.pi;
+    const sweep = math.pi * 0.6;
+    final rect = Rect.fromCircle(center: center, radius: radius - 1);
     final gradient = SweepGradient(
-      transform: GradientRotation(startAngle),
-      colors: [primary.withValues(alpha: 0.45), primary.withValues(alpha: 0)],
+      transform: GradientRotation(lead - sweep),
+      colors: [
+        primary.withValues(alpha: 0),
+        primary.withValues(alpha: 0.16),
+        primary.withValues(alpha: 0.42),
+      ],
+      stops: const [0.0, 0.6 * sweep / (2 * math.pi), sweep / (2 * math.pi)],
     );
     canvas.drawArc(
       rect,
-      startAngle,
+      lead - sweep,
       sweep,
       true,
       Paint()..shader = gradient.createShader(rect),
     );
 
-    final dotAngle = startAngle + sweep;
-    final dotOffset = center +
-        Offset(math.cos(dotAngle), math.sin(dotAngle)) * (radius - 1);
-    canvas.drawCircle(dotOffset, 3, Paint()..color = primary);
+    // Leading radius line with a soft glow, tipped by the scan dot.
+    final tipDir = Offset(math.cos(lead), math.sin(lead));
+    final tip = center + tipDir * (radius - 2);
+    canvas.drawLine(
+      center,
+      tip,
+      Paint()
+        ..color = primary.withValues(alpha: 0.85)
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawCircle(
+      tip,
+      5,
+      Paint()
+        ..color = primary.withValues(alpha: 0.55)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawCircle(tip, 2.6, Paint()..color = primary);
+    canvas.drawCircle(center, 2.2, Paint()..color = primary);
   }
 
   @override

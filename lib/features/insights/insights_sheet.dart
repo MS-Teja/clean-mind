@@ -88,6 +88,9 @@ class InsightsSheet extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
             children: [
+              // AI entry point stays at the top: with a page of insights it
+              // would otherwise be scrolled out of existence.
+              const _AiSection(),
               if (safe.isEmpty && review.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
@@ -118,7 +121,6 @@ class InsightsSheet extends ConsumerWidget {
                 for (final insight in review) _InsightTile(insight: insight),
               ],
               const SizedBox(height: 16),
-              const _AiSection(),
             ],
           ),
         ),
