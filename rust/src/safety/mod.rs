@@ -50,14 +50,26 @@ const PROTECTED_SYSTEM_PREFIXES: &[&str] = &[
     "c:\\programdata\\microsoft",
 ];
 
-/// Why `path` must not be deleted, or `None` if it is fair game.
-/// This is the single choke point: the scanner uses it to tier nodes and the
-/// ops layer re-checks it on every deletion request.
-pub fn protected_reason(path: &Path, home: Option<&Path>) -> Option<String> {
+/// Why `path` must never be *deleted*, or `None` if it is fair game.
+/// The ops layer re-checks this on every deletion request. On top of
+/// [`protected_reason`] it also refuses the home directory and its ancestors —
+/// a rule that must NOT feed scan tiering: the scan root is usually `~` (or
+/// an ancestor like `/`), and tiers cascade to children, so it would mark the
+/// entire tree protected.
+pub fn deletion_blocked_reason(path: &Path, home: Option<&Path>) -> Option<String> {
     if let Some(home) = home {
         if path == home || home.starts_with(path) {
             return Some("This contains your entire home directory.".into());
         }
+    }
+    protected_reason(path, home)
+}
+
+/// Why `path` is protected territory, or `None` if it is fair game.
+/// This is the single choke point: the scanner uses it to tier nodes (tiers
+/// cascade to descendants) and [`deletion_blocked_reason`] includes it.
+pub fn protected_reason(path: &Path, home: Option<&Path>) -> Option<String> {
+    if let Some(home) = home {
         if let Ok(rel) = path.strip_prefix(home) {
             let comps: Vec<String> = rel
                 .components()
@@ -120,10 +132,15 @@ mod tests {
     }
 
     #[test]
-    fn home_and_ancestors_protected() {
+    fn home_and_ancestors_blocked_from_deletion_but_not_tiered() {
         let h = home();
-        assert!(protected_reason(&h, Some(&h)).is_some());
-        assert!(protected_reason(h.parent().unwrap(), Some(&h)).is_some());
+        // Deleting home or an ancestor is always refused...
+        assert!(deletion_blocked_reason(&h, Some(&h)).is_some());
+        assert!(deletion_blocked_reason(h.parent().unwrap(), Some(&h)).is_some());
+        // ...but tiering must not mark them protected: the scan root is
+        // usually home (or /) and protection cascades to every child.
+        assert!(protected_reason(&h, Some(&h)).is_none());
+        assert!(protected_reason(h.parent().unwrap(), Some(&h)).is_none());
     }
 
     #[test]

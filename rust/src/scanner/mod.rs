@@ -177,6 +177,37 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> Option<
     Some(store)
 }
 
+/// Directories never descended into when met during a walk (scanning one
+/// directly as the root still works — the check runs on children only).
+///
+/// On macOS the Data volume is firmlinked into `/Users`, `/Applications`,
+/// `/Library`, … so also walking `/System/Volumes/Data` counts every user
+/// file twice (a `/` scan then reports far more than the disk holds);
+/// `/System/Volumes` additionally holds Preboot/VM/Update noise. `/Volumes`
+/// mounts external disks plus the boot volume itself.
+#[cfg(target_os = "macos")]
+fn is_skipped_mount(path: &Path) -> bool {
+    matches!(
+        path.to_str(),
+        Some("/System/Volumes" | "/Volumes" | "/dev" | "/cores" | "/home" | "/net")
+    )
+}
+
+/// On Linux, virtual filesystems (`/proc` is effectively infinite) and
+/// removable-media mount points.
+#[cfg(target_os = "linux")]
+fn is_skipped_mount(path: &Path) -> bool {
+    matches!(
+        path.to_str(),
+        Some("/proc" | "/sys" | "/dev" | "/run" | "/mnt" | "/media")
+    )
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn is_skipped_mount(_path: &Path) -> bool {
+    false
+}
+
 fn walk(
     path: &Path,
     name: String,
@@ -222,6 +253,9 @@ fn walk(
         let entry_name = entry.file_name().to_string_lossy().into_owned();
         names.insert(entry_name.clone());
         if file_type.is_dir() {
+            if is_skipped_mount(&entry.path()) {
+                continue;
+            }
             // DirEntry::metadata does not traverse symlinks, so `is_dir` here
             // means a real directory — symlinks to dirs land in the file arm.
             let m = entry.metadata().map(|m| mtime_of(&m)).unwrap_or(0);

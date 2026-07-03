@@ -26,7 +26,7 @@ pub fn delete_paths(paths: &[&Path], mode: DeleteMode) -> Vec<Outcome> {
         .iter()
         .map(|path| {
             let display = path.to_string_lossy().into_owned();
-            if let Some(reason) = safety::protected_reason(path, home.as_deref()) {
+            if let Some(reason) = safety::deletion_blocked_reason(path, home.as_deref()) {
                 return Outcome {
                     path: display,
                     ok: false,
