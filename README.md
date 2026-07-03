@@ -4,7 +4,9 @@
 
 Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk usage analyzer in the spirit of OmniDiskSweeper and DaisyDisk, built for developers. Beyond showing *what* takes space, it identifies developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and classifies everything by **regenerability**, optionally with help from an LLM you control.
 
-> ⚠️ Early development. Not yet ready for daily use.
+> ⚠️ Early development, but the core loop works end to end: scan → interactive
+> treemap → tiered insights → move-to-Trash, with an optional bring-your-own-LLM
+> analysis pass. See [CONTRIBUTING.md](CONTRIBUTING.md) to add cleanup rules.
 
 ## How it works
 

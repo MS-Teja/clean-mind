@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
@@ -14,17 +16,66 @@ class ScanRootController extends Notifier<String> {
 final scanRootProvider =
     NotifierProvider<ScanRootController, String>(ScanRootController.new);
 
-/// Runs scans and exposes the latest result. `null` means no scan yet.
-class ScanController extends AsyncNotifier<ScanSummary?> {
-  @override
-  Future<ScanSummary?> build() async => null;
+sealed class ScanState {
+  const ScanState();
+}
 
-  Future<void> scan() async {
-    final root = ref.read(scanRootProvider);
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => scanSummary(path: root));
+class ScanIdle extends ScanState {
+  const ScanIdle();
+}
+
+class ScanRunning extends ScanState {
+  const ScanRunning(this.progress);
+  final ScanProgress? progress;
+}
+
+class ScanDone extends ScanState {
+  const ScanDone({required this.rootId, required this.progress});
+  final int rootId;
+  final ScanProgress progress;
+}
+
+class ScanFailed extends ScanState {
+  const ScanFailed(this.message);
+  final String message;
+}
+
+class ScanController extends Notifier<ScanState> {
+  StreamSubscription<ScanProgress>? _sub;
+
+  @override
+  ScanState build() {
+    ref.onDispose(() => _sub?.cancel());
+    return const ScanIdle();
   }
+
+  Future<void> start() async {
+    await _sub?.cancel();
+    state = const ScanRunning(null);
+    final root = ref.read(scanRootProvider);
+    _sub = startScan(path: root).listen(
+      (progress) {
+        switch (progress.stage) {
+          case ScanStage.scanning:
+            state = ScanRunning(progress);
+          case ScanStage.done:
+            state = ScanDone(rootId: progress.rootId, progress: progress);
+          case ScanStage.cancelled:
+            state = const ScanIdle();
+          case ScanStage.failed:
+            state = const ScanFailed('The scan could not be completed.');
+        }
+      },
+      onError: (Object e) => state = ScanFailed(e.toString()),
+    );
+  }
+
+  Future<void> cancel() => cancelScan();
+
+  /// Back to the landing screen; the old tree stays in Rust memory until the
+  /// next scan replaces it, but the UI treats it as gone.
+  void reset() => state = const ScanIdle();
 }
 
 final scanControllerProvider =
-    AsyncNotifierProvider<ScanController, ScanSummary?>(ScanController.new);
+    NotifierProvider<ScanController, ScanState>(ScanController.new);
