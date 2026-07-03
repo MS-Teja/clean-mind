@@ -26,8 +26,16 @@ List<FsNode> getChildren({
   required PlatformInt64 limit,
 }) => RustLib.instance.api.crateApiScanGetChildren(id: id, limit: limit);
 
-/// Home directory of the current user, the default scan root.
+/// Home directory of the current user, the fallback scan root.
+String homeDirPath() => RustLib.instance.api.crateApiScanHomeDirPath();
+
+/// Scan root for a fresh launch: the last root the user picked, if it still
+/// exists, otherwise the home directory.
 String defaultScanRoot() => RustLib.instance.api.crateApiScanDefaultScanRoot();
+
+/// Remember the picked scan root for the next launch.
+void setScanRoot({required String path}) =>
+    RustLib.instance.api.crateApiScanSetScanRoot(path: path);
 
 enum FsKind {
   dir,

@@ -13,6 +13,9 @@ pub struct Settings {
     pub model: String,
     /// Pseudonymize path names before sending anything to a remote LLM.
     pub redact: bool,
+    /// Last scan root the user picked; scan *data* is still never persisted.
+    #[serde(default)]
+    pub scan_root: Option<String>,
 }
 
 impl Default for Settings {
@@ -22,6 +25,7 @@ impl Default for Settings {
             base_url: default_base_url("anthropic").into(),
             model: "claude-opus-4-8".into(),
             redact: false,
+            scan_root: None,
         }
     }
 }

@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
 
-/// Directory the next scan will walk. Defaults to the user's home directory;
-/// never persisted — every launch starts fresh.
+/// Directory the next scan will walk. Starts from the last root the user
+/// picked (falling back to home); scan *data* is never persisted.
 class ScanRootController extends Notifier<String> {
   @override
   String build() => defaultScanRoot();
 
-  void set(String path) => state = path;
+  void set(String path) {
+    state = path;
+    setScanRoot(path: path);
+  }
 }
 
 final scanRootProvider =

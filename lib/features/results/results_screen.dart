@@ -17,32 +17,22 @@ class ResultsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final reclaimable = ref.watch(reclaimableTotalProvider);
 
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
                 const Expanded(child: _Breadcrumbs()),
                 const SizedBox(width: 12),
-                if (reclaimable > 0)
-                  ActionChip(
-                    avatar: Icon(Icons.cleaning_services_rounded,
-                        size: 18, color: theme.tiers.safe),
-                    label: Text('${formatBytes(reclaimable)} reclaimable'),
-                    onPressed: () => showInsightsSheet(context),
-                  )
-                else
-                  ActionChip(
-                    avatar: const Icon(Icons.insights_rounded, size: 18),
-                    label: const Text('Insights'),
-                    onPressed: () => showInsightsSheet(context),
-                  ),
-                const SizedBox(width: 8),
+                const _FocusReadout(),
+                const SizedBox(width: 12),
+                _ReclaimablePill(bytes: reclaimable),
+                const SizedBox(width: 6),
                 IconButton(
                   tooltip: 'New scan',
                   icon: const Icon(Icons.refresh_rounded),
@@ -59,7 +49,7 @@ class ResultsScreen extends ConsumerWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -77,12 +67,118 @@ class ResultsScreen extends ConsumerWidget {
   }
 }
 
+/// Reclaimable total as a tappable emerald pill; falls back to a quieter
+/// "Insights" chip when there is nothing to reclaim. Always opens the sheet.
+class _ReclaimablePill extends StatelessWidget {
+  const _ReclaimablePill({required this.bytes});
+
+  final int bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    if (bytes <= 0) {
+      return Material(
+        color: Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => showInsightsSheet(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: ShapeDecoration(
+              shape: StadiumBorder(
+                side: BorderSide(color: scheme.outlineVariant),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.insights_rounded,
+                    size: 15, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 7),
+                Text('Insights',
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final safe = theme.tiers.safe;
+    return Material(
+      color: Colors.transparent,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => showInsightsSheet(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: ShapeDecoration(
+            color: safe.withValues(alpha: 0.13),
+            shape: StadiumBorder(
+              side: BorderSide(color: safe.withValues(alpha: 0.45)),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cleaning_services_rounded, size: 15, color: safe),
+              const SizedBox(width: 7),
+              Text(formatBytes(bytes),
+                  style: mono(13, weight: FontWeight.w600, color: safe)),
+              const SizedBox(width: 5),
+              Text('reclaimable',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact size/counts readout for the current focus, right of the crumbs.
+class _FocusReadout extends ConsumerWidget {
+  const _FocusReadout();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final focus = ref.watch(focusNodeProvider);
+    if (focus == null || focus.kind != FsKind.dir) {
+      return const SizedBox.shrink();
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(formatBytes(focus.size),
+            style: mono(13,
+                weight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+        const SizedBox(width: 8),
+        Text(
+          '${formatCount(focus.fileCount)} files · '
+          '${formatCount(focus.dirCount)} folders',
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
 class _Breadcrumbs extends ConsumerWidget {
   const _Breadcrumbs();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final trail = ref.watch(focusTrailProvider);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -92,23 +188,41 @@ class _Breadcrumbs extends ConsumerWidget {
           for (var i = 0; i < trail.length; i++) ...[
             if (i > 0)
               Icon(Icons.chevron_right_rounded,
-                  size: 18, color: theme.colorScheme.outline),
-            InkWell(
-              borderRadius: BorderRadius.circular(6),
-              onTap: i == trail.length - 1
-                  ? null
-                  : () => ref.read(focusTrailProvider.notifier).popTo(i),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Text(
-                  trail[i].name,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight:
-                        i == trail.length - 1 ? FontWeight.w700 : null,
-                    color: i == trail.length - 1
-                        ? theme.colorScheme.onSurface
-                        : theme.colorScheme.primary,
+                  size: 16, color: scheme.outline),
+            Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                hoverColor: scheme.onSurface.withValues(alpha: 0.06),
+                onTap: i == trail.length - 1
+                    ? null
+                    : () => ref.read(focusTrailProvider.notifier).popTo(i),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (i == 0) ...[
+                        Icon(Icons.home_rounded,
+                            size: 14,
+                            color: i == trail.length - 1
+                                ? scheme.onSurface
+                                : scheme.primary),
+                        const SizedBox(width: 5),
+                      ],
+                      Text(
+                        trail[i].name,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight:
+                              i == trail.length - 1 ? FontWeight.w700 : null,
+                          color: i == trail.length - 1
+                              ? scheme.onSurface
+                              : scheme.primary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -126,14 +240,15 @@ class _Legend extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final insights = ref.watch(insightsProvider);
     final hasReview = insights.any((i) => i.tier == FsTier.review);
 
-    Widget chip(Color color, IconData? icon, String label) => Row(
+    Widget chip(Color? color, IconData? icon, String label) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             icon != null
-                ? Icon(icon, size: 12, color: theme.colorScheme.onSurfaceVariant)
+                ? Icon(icon, size: 12, color: scheme.onSurfaceVariant)
                 : Container(
                     width: 10,
                     height: 10,
@@ -142,23 +257,25 @@ class _Legend extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
-            const SizedBox(width: 5),
+            const SizedBox(width: 6),
             Text(label,
                 style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
           ],
         );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 2),
+      padding: const EdgeInsets.only(bottom: 12, top: 2),
       child: Wrap(
         alignment: WrapAlignment.center,
         spacing: 18,
+        runSpacing: 6,
         children: [
+          chip(theme.map.folderAt(0.35), null, 'Folder'),
+          chip(theme.map.fileAt(0.35), null, 'File'),
           chip(theme.tiers.safe, null, 'Safe to reclaim'),
           if (hasReview) chip(theme.tiers.review, null, 'Review first'),
-          chip(theme.tiers.protected, Icons.lock_outline_rounded, 'Protected'),
-          chip(theme.colorScheme.surfaceContainerHighest, null, 'Folder'),
+          chip(null, Icons.lock_outline_rounded, 'Protected'),
         ],
       ),
     );

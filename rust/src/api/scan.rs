@@ -224,13 +224,33 @@ pub fn get_children(id: i64, limit: i64) -> Vec<FsNode> {
     out
 }
 
-/// Home directory of the current user, the default scan root.
+/// Home directory of the current user, the fallback scan root.
 #[flutter_rust_bridge::frb(sync)]
-pub fn default_scan_root() -> String {
+pub fn home_dir_path() -> String {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("/"))
         .to_string_lossy()
         .into_owned()
+}
+
+/// Scan root for a fresh launch: the last root the user picked, if it still
+/// exists, otherwise the home directory.
+#[flutter_rust_bridge::frb(sync)]
+pub fn default_scan_root() -> String {
+    if let Some(saved) = crate::config::load().scan_root {
+        if std::path::Path::new(&saved).is_dir() {
+            return saved;
+        }
+    }
+    home_dir_path()
+}
+
+/// Remember the picked scan root for the next launch.
+#[flutter_rust_bridge::frb(sync)]
+pub fn set_scan_root(path: String) {
+    let mut settings = crate::config::load();
+    settings.scan_root = Some(path);
+    let _ = crate::config::save(&settings);
 }
 
 #[flutter_rust_bridge::frb(init)]

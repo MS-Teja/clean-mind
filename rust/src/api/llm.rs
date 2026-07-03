@@ -38,6 +38,7 @@ pub fn set_llm_settings(settings: LlmSettings) -> Result<(), String> {
         base_url: settings.base_url,
         model: settings.model,
         redact: settings.redact,
+        scan_root: config::load().scan_root,
     })
 }
 

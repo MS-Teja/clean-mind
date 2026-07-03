@@ -9,10 +9,8 @@ import 'package:clean_mind/features/results/results_screen.dart';
 import 'package:clean_mind/features/results/treemap/treemap_view.dart';
 import 'package:clean_mind/features/scan/scan_providers.dart';
 import 'package:clean_mind/main.dart';
-import 'package:clean_mind/src/rust/api/insights.dart';
 import 'package:clean_mind/src/rust/api/scan.dart';
 import 'package:clean_mind/src/rust/frb_generated.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -61,7 +59,9 @@ void main() {
         child: const CleanMindApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    // Fixed pumps: the landing hero animation loops forever, so
+    // pumpAndSettle would grind against it indefinitely.
+    await _pumpFor(tester, const Duration(milliseconds: 600));
 
     // Landing screen renders.
     expect(find.text('Clean Mind'), findsOneWidget);
@@ -75,6 +75,7 @@ void main() {
     );
     await _waitFor(tester, () =>
         container.read(scanControllerProvider) is ScanDone);
+    await _pumpFor(tester, const Duration(milliseconds: 800));
 
     // Results screen + treemap rendered with real tiles.
     expect(find.byType(ResultsScreen), findsOneWidget);
@@ -131,7 +132,7 @@ void main() {
         child: const CleanMindApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(milliseconds: 600));
     await tester.tap(find.text('Scan'));
     await tester.pump();
     final container = ProviderScope.containerOf(
@@ -139,7 +140,9 @@ void main() {
     );
     await _waitFor(tester, () =>
         container.read(scanControllerProvider) is ScanDone);
-    await tester.pumpAndSettle();
+    // Let the results transition finish (the outgoing landing view keeps its
+    // loop animation ticking until the AnimatedSwitcher removes it).
+    await _pumpFor(tester, const Duration(milliseconds: 800));
 
     // Double-tap the "webapp" tile to drill in.
     await tester.tap(find.text('webapp').first);
@@ -161,6 +164,15 @@ class _FixedRoot extends ScanRootController {
   final String path;
   @override
   String build() => path;
+}
+
+/// Pump fixed frames for [duration]; safe with looping animations where
+/// pumpAndSettle would never (or only flakily) settle.
+Future<void> _pumpFor(WidgetTester tester, Duration duration) async {
+  final end = DateTime.now().add(duration);
+  while (DateTime.now().isBefore(end)) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
 
 Future<void> _waitFor(WidgetTester tester, bool Function() cond,
