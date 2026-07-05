@@ -30,18 +30,13 @@ Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk us
 
 ## Screenshots
 
-<!--
-Add real screenshots here — the treemap and the AI-insights panel are the two
-money shots. Drop PNGs in docs/ and reference them, e.g.:
+An interactive treemap sizes every tile by how much space it takes; green tiles are safe to reclaim.
 
-![Treemap](docs/screenshot-treemap.png)
-![Insights](docs/screenshot-insights.png)
+![Clean Mind's treemap view, with build artifacts highlighted as safe to reclaim](docs/screenshot-treemap.png)
 
-A short GIF of a scan → drill-down → reclaim flow is worth even more; keep it
-under ~10 MB so GitHub renders it inline.
--->
+The insights panel groups reclaimable items and, for each one, explains *why* it's safe and the exact command that regenerates it.
 
-_Screenshots coming soon._
+![Clean Mind's insights panel explaining each reclaimable item](docs/screenshot-insights.png)
 
 ## How it works
 

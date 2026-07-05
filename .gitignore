@@ -42,3 +42,6 @@ app.*.map.json
 # Rust
 rust/target/
 rust_builder/target/
+
+# Local marketing drafts — never published to the repo
+/marketing/
