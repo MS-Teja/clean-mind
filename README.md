@@ -24,6 +24,22 @@ The LLM is never trusted on its own:
 2. **Review** — LLM suggestions that no rule verifies. Always shown with reasoning, never one-click.
 3. **Protected** — a hard-coded denylist (documents, photos, `.ssh`, system paths…) that neither rules nor the LLM can override.
 
+## Install
+
+Grab the build for your platform from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest).
+
+**macOS** — open the DMG and drag **Clean Mind** to Applications. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
+
+- *macOS 15 and later:* open the app once (it will be blocked), then **System Settings → Privacy & Security → Open Anyway**.
+- *macOS 14 and earlier:* right-click the app → **Open** → **Open**.
+- Or from a terminal: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
+
+**Linux** *(experimental)* — extract the tarball and run `clean_mind`. Requires GTK 3.
+
+**Windows** *(experimental)* — extract the zip and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
+
+The Linux and Windows builds compile and pass tests in CI but have seen less real-world use than macOS — issue reports are very welcome.
+
 ## Stack
 
 - **Core:** Rust (`rust/`) — scanner, rules engine, LLM providers, trash operations.

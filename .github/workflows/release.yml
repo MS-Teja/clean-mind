@@ -1,0 +1,171 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag and verify pubspec
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^version: ${VERSION}+" pubspec.yaml; then
+            echo "::error::Tag is v${VERSION} but pubspec.yaml does not declare 'version: ${VERSION}+<build>'"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build macos --release
+
+      - name: Package DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staging
+          cp -R "build/macos/Build/Products/Release/Clean Mind.app" staging/
+          ln -s /Applications staging/Applications
+          hdiutil create -volname "Clean Mind" -srcfolder staging -ov -format UDZO "CleanMind-${VERSION}-macos.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: CleanMind-*-macos.dmg
+
+  build-linux:
+    name: Build (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag and verify pubspec
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^version: ${VERSION}+" pubspec.yaml; then
+            echo "::error::Tag is v${VERSION} but pubspec.yaml does not declare 'version: ${VERSION}+<build>'"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build linux --release
+
+      - name: Package tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staging/clean-mind
+          cp -R build/linux/x64/release/bundle/. staging/clean-mind/
+          cp packaging/linux/io.github.msteja.cleanmind.desktop staging/clean-mind/
+          cp packaging/linux/io.github.msteja.cleanmind.png staging/clean-mind/
+          tar -czf "CleanMind-${VERSION}-linux-x64.tar.gz" -C staging clean-mind
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-tarball
+          path: CleanMind-*-linux-x64.tar.gz
+
+  build-windows:
+    name: Build (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag and verify pubspec
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^version: ${VERSION}+" pubspec.yaml; then
+            echo "::error::Tag is v${VERSION} but pubspec.yaml does not declare 'version: ${VERSION}+<build>'"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build windows --release
+
+      - name: Package zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "CleanMind-${env:VERSION}-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: CleanMind-*-windows-x64.zip
+
+  release:
+    name: Create release
+    needs: [build-macos, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ### macOS
+            Download the DMG, open it, drag **Clean Mind** to Applications.
+
+            This free app is not notarized (there is no paid Apple Developer account behind it), so the first launch needs one extra step:
+            - **macOS 15 (Sequoia) and later:** open the app once (it will be blocked), then go to **System Settings → Privacy & Security**, scroll down to *"Clean Mind" was blocked*, and click **Open Anyway**.
+            - **macOS 14 and earlier:** right-click the app in Applications and choose **Open**, then **Open** again.
+            - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
+
+            ### Linux (experimental)
+            Extract the tarball and run `./clean-mind/clean_mind`. Requires GTK 3.
+
+            ### Windows (experimental)
+            Extract the zip and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+
+            Linux and Windows builds compile and pass tests in CI but have had less real-world testing than macOS — issue reports are very welcome.
