@@ -8,7 +8,7 @@
 PRODUCT_NAME = Clean Mind
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.cleanMind
+PRODUCT_BUNDLE_IDENTIFIER = io.github.msteja.cleanmind
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Siva Teja Mutyala. All rights reserved.

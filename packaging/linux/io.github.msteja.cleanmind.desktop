@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Clean Mind
+Comment=Disk usage analyzer that understands developer bloat
+Exec=clean_mind
+Icon=io.github.msteja.cleanmind
+Terminal=false
+Categories=Utility;System;
