@@ -10,7 +10,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
 
 /// Start a scan. Progress streams every ~120ms; the final item carries
-/// `stage: Done` (with the root id) / `Cancelled` / `Failed`.
+/// `stage: Done` (with the root id) / `Cancelled` (with root id >= 0 if
+/// partial results are available, -1 if this scan was superseded before it
+/// could publish anything) / `Failed`.
 Stream<ScanProgress> startScan({required String path}) =>
     RustLib.instance.api.crateApiScanStartScan(path: path);
 

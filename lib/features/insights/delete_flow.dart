@@ -4,6 +4,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 
 import '../../src/rust/api/ops.dart';
 import '../../src/rust/api/scan.dart';
+import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../util/format.dart';
 import '../results/tree_providers.dart';
@@ -78,7 +79,8 @@ Future<void> confirmAndTrash(
   final outcomes =
       await moveToTrash(nodeIds: Int64List.fromList([for (final n in nodes) n.id]));
   if (!context.mounted) return;
-  _reportOutcomes(context, ref, nodes, outcomes, 'Moved to Trash');
+  _reportOutcomes(context, ref, nodes, outcomes, 'Moved to Trash',
+      trashed: true);
 }
 
 /// Permanent deletion: gated behind a type-to-confirm dialog. Never the
@@ -184,7 +186,8 @@ Future<void> confirmAndDeletePermanently(
 
 /// Outcomes come back in request order, so zip them against the nodes.
 void _reportOutcomes(BuildContext context, WidgetRef ref, List<FsNode> nodes,
-    List<OpOutcome> outcomes, String verb) {
+    List<OpOutcome> outcomes, String verb,
+    {bool trashed = false}) {
   final succeededIds = <int>[];
   OpOutcome? firstFailure;
   for (var i = 0; i < outcomes.length; i++) {
@@ -202,5 +205,10 @@ void _reportOutcomes(BuildContext context, WidgetRef ref, List<FsNode> nodes,
           'Rescan to update sizes.'
       : '$verb ${succeededIds.length}, $failedCount failed: '
           '${firstFailure?.message ?? 'unknown error'}';
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(message),
+    action: trashed && succeededIds.isNotEmpty
+        ? SnackBarAction(label: 'Open Trash', onPressed: openTrash)
+        : null,
+  ));
 }

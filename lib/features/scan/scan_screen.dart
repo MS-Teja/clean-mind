@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
+import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../ui/widgets.dart';
 import '../../util/format.dart';
@@ -97,6 +98,10 @@ class _LandingView extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (fullDiskAccessStatus() == FdaStatus.denied) ...[
+                  const SizedBox(height: 12),
+                  const _FullDiskAccessBanner(),
+                ],
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -175,6 +180,42 @@ class _LandingView extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Shown on the landing screen when macOS Full Disk Access is missing, so the
+/// user understands why a home/disk scan may under-report and can fix it.
+class _FullDiskAccessBanner extends StatelessWidget {
+  const _FullDiskAccessBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return GlassPanel(
+      color: scheme.primary.withValues(alpha: 0.07),
+      radius: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.shield_outlined, size: 18, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Some folders are off-limits to Clean Mind. Grant Full Disk '
+              'Access for complete scan results.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: openFullDiskAccessSettings,
+            child: const Text('Open Settings'),
+          ),
+        ],
       ),
     );
   }

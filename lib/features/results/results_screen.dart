@@ -18,6 +18,9 @@ class ResultsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reclaimable = ref.watch(reclaimableTotalProvider);
+    final scan = ref.watch(scanControllerProvider);
+    final partial = scan is ScanDone && scan.partial;
+    final errors = scan is ScanDone ? scan.progress.errors : 0;
 
     return Scaffold(
       body: Column(
@@ -47,6 +50,8 @@ class ResultsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (partial || errors > 0)
+            _ScanCaveats(partial: partial, errors: errors),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -61,6 +66,79 @@ class ResultsScreen extends ConsumerWidget {
             ),
           ),
           const _Legend(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Non-blocking caveats strip under the header: a visible chip when the scan
+/// was cancelled early, and a muted note counting unreadable items.
+class _ScanCaveats extends StatelessWidget {
+  const _ScanCaveats({required this.partial, required this.errors});
+
+  final bool partial;
+  final int errors;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final review = theme.tiers.review;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Row(
+        children: [
+          if (partial)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: ShapeDecoration(
+                color: review.withValues(alpha: 0.13),
+                shape: StadiumBorder(
+                  side: BorderSide(color: review.withValues(alpha: 0.45)),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.timelapse_rounded, size: 15, color: review),
+                  const SizedBox(width: 7),
+                  Text(
+                    'Partial scan — stopped early, sizes are incomplete.',
+                    style: theme.textTheme.labelMedium?.copyWith(color: review),
+                  ),
+                ],
+              ),
+            ),
+          if (partial && errors > 0) const SizedBox(width: 14),
+          if (errors > 0)
+            Flexible(
+              child: Tooltip(
+                message: 'Usually permission-protected folders. On macOS, '
+                    'granting Full Disk Access reduces this.',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline_rounded,
+                        size: 13, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '$errors item${errors == 1 ? '' : 's'} '
+                        "couldn't be read",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant
+                              .withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

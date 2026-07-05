@@ -33,9 +33,17 @@ class ScanRunning extends ScanState {
 }
 
 class ScanDone extends ScanState {
-  const ScanDone({required this.rootId, required this.progress});
+  const ScanDone({
+    required this.rootId,
+    required this.progress,
+    this.partial = false,
+  });
   final int rootId;
   final ScanProgress progress;
+
+  /// True when the tree was built from a user-cancelled scan: it is loaded
+  /// and browsable, but sizes are incomplete.
+  final bool partial;
 }
 
 class ScanFailed extends ScanState {
@@ -64,7 +72,15 @@ class ScanController extends Notifier<ScanState> {
           case ScanStage.done:
             state = ScanDone(rootId: progress.rootId, progress: progress);
           case ScanStage.cancelled:
-            state = const ScanIdle();
+            if (progress.rootId >= 0) {
+              state = ScanDone(
+                rootId: progress.rootId,
+                progress: progress,
+                partial: true,
+              );
+            } else {
+              state = const ScanIdle();
+            }
           case ScanStage.failed:
             state = const ScanFailed('The scan could not be completed.');
         }

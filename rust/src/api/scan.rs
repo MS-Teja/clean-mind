@@ -82,7 +82,9 @@ fn snapshot(progress: &ProgressCounters, stage: ScanStage, root_id: i64) -> Scan
 }
 
 /// Start a scan. Progress streams every ~120ms; the final item carries
-/// `stage: Done` (with the root id) / `Cancelled` / `Failed`.
+/// `stage: Done` (with the root id) / `Cancelled` (with root id >= 0 if
+/// partial results are available, -1 if this scan was superseded before it
+/// could publish anything) / `Failed`.
 pub fn start_scan(path: String, sink: StreamSink<ScanProgress>) -> Result<(), String> {
     let progress = Arc::new(ProgressCounters::default());
     {
@@ -105,14 +107,27 @@ pub fn start_scan(path: String, sink: StreamSink<ScanProgress>) -> Result<(), St
         });
         loop {
             match rx.recv_timeout(Duration::from_millis(120)) {
-                Ok(Some(store)) => {
+                Ok(store) => {
+                    let cancelled = progress.cancel.load(Ordering::Relaxed);
                     let root_id = store.root as i64;
-                    *STORE.write().unwrap() = Some(store);
-                    let _ = sink.add(snapshot(&progress, ScanStage::Done, root_id));
-                    break;
-                }
-                Ok(None) => {
-                    let _ = sink.add(snapshot(&progress, ScanStage::Cancelled, -1));
+                    let is_current = CURRENT_SCAN
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .is_some_and(|cur| Arc::ptr_eq(cur, &progress));
+                    if is_current {
+                        *STORE.write().unwrap() = Some(store);
+                        let stage = if cancelled {
+                            ScanStage::Cancelled
+                        } else {
+                            ScanStage::Done
+                        };
+                        let _ = sink.add(snapshot(&progress, stage, root_id));
+                    } else {
+                        // Superseded by a newer scan ("last request wins" set
+                        // our cancel flag); don't clobber the newer STORE.
+                        let _ = sink.add(snapshot(&progress, ScanStage::Cancelled, -1));
+                    }
                     break;
                 }
                 Err(RecvTimeoutError::Timeout) => {

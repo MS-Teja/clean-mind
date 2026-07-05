@@ -10,6 +10,7 @@ import 'api/insights.dart';
 import 'api/llm.dart';
 import 'api/ops.dart';
 import 'api/scan.dart';
+import 'api/system.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -48,6 +49,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FdaStatus dco_decode_fda_status(dynamic raw);
 
   @protected
   FsKind dco_decode_fs_kind(dynamic raw);
@@ -110,6 +114,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  UpdateCheck dco_decode_update_check(dynamic raw);
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
@@ -134,6 +141,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FdaStatus sse_decode_fda_status(SseDeserializer deserializer);
 
   @protected
   FsKind sse_decode_fs_kind(SseDeserializer deserializer);
@@ -198,6 +208,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  UpdateCheck sse_decode_update_check(SseDeserializer deserializer);
+
+  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
     SseSerializer serializer,
@@ -232,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_fda_status(FdaStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_fs_kind(FsKind self, SseSerializer serializer);
@@ -307,6 +323,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_update_check(UpdateCheck self, SseSerializer serializer);
 }
 
 // Section: wire_class

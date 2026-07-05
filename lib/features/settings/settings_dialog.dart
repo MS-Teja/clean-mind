@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../src/rust/api/llm.dart';
+import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../ui/widgets.dart';
 import 'settings_providers.dart';
+
+/// App version/build, read once from the platform bundle for the About section.
+final packageInfoProvider = FutureProvider<PackageInfo>(
+  (ref) => PackageInfo.fromPlatform(),
+);
 
 void showSettingsDialog(BuildContext context) {
   showDialog<void>(
@@ -33,6 +40,7 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
   bool _testSuccess = false;
   bool _testing = false;
   bool _keyDirty = false;
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -246,8 +254,114 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          Divider(color: scheme.outlineVariant),
+          const SizedBox(height: 20),
+          _buildAbout(context, theme),
         ],
       ),
     );
+  }
+
+  Widget _buildAbout(BuildContext context, ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final info = ref.watch(packageInfoProvider);
+    final version = info.value?.version ?? '';
+    final build = info.value?.buildNumber ?? '';
+    final versionLabel = version.isEmpty
+        ? '…'
+        : 'Version $version${build.isEmpty ? '' : ' ($build)'}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('About', style: theme.textTheme.headlineSmall),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text('Clean Mind', style: theme.textTheme.titleMedium),
+            const SizedBox(width: 8),
+            Text(
+              versionLabel,
+              style: mono(12, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () =>
+                  openUrl(url: 'https://github.com/MS-Teja/clean-mind'),
+              icon: const Icon(Icons.code_rounded, size: 16),
+              label: const Text('GitHub'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => showLicensePage(
+                context: context,
+                applicationName: 'Clean Mind',
+                applicationVersion: version,
+              ),
+              icon: const Icon(Icons.description_outlined, size: 16),
+              label: const Text('Licenses'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _checkingUpdate || version.isEmpty
+                  ? null
+                  : () => _checkForUpdate(version),
+              icon: _checkingUpdate
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.system_update_alt_rounded, size: 16),
+              label: Text(_checkingUpdate ? 'Checking…' : 'Check for updates'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _checkForUpdate(String version) async {
+    setState(() => _checkingUpdate = true);
+    try {
+      final result = await checkForUpdate(currentVersion: version);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(result.updateAvailable ? 'Update available' : 'Up to date'),
+          content: Text(
+            result.updateAvailable
+                ? 'Version ${result.latest} is available.'
+                : "You're up to date.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            if (result.updateAvailable)
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  openUrl(url: result.releaseUrl);
+                },
+                child: const Text('View release'),
+              ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Update check failed: $e')));
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
   }
 }

@@ -145,8 +145,12 @@ impl TmpNode {
     }
 }
 
-/// Walk `root` in parallel and build the scan tree. Returns `None` if cancelled.
-pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> Option<ScanStore> {
+/// Walk `root` in parallel and build the scan tree. Always returns the tree
+/// built so far — on cancel (`progress.cancel`), `walk` returns whatever
+/// partial nodes it had accumulated, and we still flatten and finalize them
+/// so the caller gets a usable (if incomplete) result. Check
+/// `progress.cancel` to know whether the scan was cut short.
+pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> ScanStore {
     let ctx = ScanCtx {
         rules: &rules,
         progress,
@@ -160,9 +164,6 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> Option<
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| root.to_string_lossy().into_owned());
     let tmp = walk(root, name, root_mtime, None, false, &ctx);
-    if progress.cancel.load(Ordering::Relaxed) {
-        return None;
-    }
 
     let mut nodes = Vec::new();
     flatten(tmp, None, &mut nodes);
@@ -174,7 +175,7 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> Option<
         rules,
     };
     finalize(&mut store);
-    Some(store)
+    store
 }
 
 /// Directories never descended into when met during a walk (scanning one
@@ -469,7 +470,7 @@ mod tests {
 
     fn scan_fixture(root: &Path) -> ScanStore {
         let progress = ProgressCounters::default();
-        scan(root, RuleSet::builtin(), &progress).unwrap()
+        scan(root, RuleSet::builtin(), &progress)
     }
 
     fn write_bytes(path: &Path, n: usize) {
@@ -540,11 +541,14 @@ mod tests {
     }
 
     #[test]
-    fn cancel_returns_none() {
+    fn cancel_returns_partial_tree() {
         let tmp = tempfile::tempdir().unwrap();
         let progress = ProgressCounters::default();
         progress.cancel.store(true, Ordering::Relaxed);
-        assert!(scan(tmp.path(), RuleSet::builtin(), &progress).is_none());
+        let store = scan(tmp.path(), RuleSet::builtin(), &progress);
+        // Cancelled before any work happened: still get a usable (empty) root.
+        let root_node = store.node(store.root).unwrap();
+        assert_eq!(root_node.kind, NodeKind::Dir);
     }
 
     #[test]

@@ -225,7 +225,7 @@ mod tests {
         )
         .unwrap();
         let progress = ProgressCounters::default();
-        let store = scan(root, RuleSet::builtin(), &progress).unwrap();
+        let store = scan(root, RuleSet::builtin(), &progress);
         (tmp, store)
     }
 
