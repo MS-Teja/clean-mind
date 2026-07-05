@@ -114,6 +114,9 @@ pub struct ProgressCounters {
 struct ScanCtx<'a> {
     rules: &'a RuleSet,
     progress: &'a ProgressCounters,
+    // Hardlink dedup keys on (dev, inode), which only exist on Unix; the
+    // field is unread elsewhere but kept so construction stays uniform.
+    #[cfg_attr(not(unix), allow(dead_code))]
     hardlinks: Mutex<HashSet<(u64, u64)>>,
 }
 
@@ -276,6 +279,8 @@ fn walk(
                 continue;
             }
         };
+        // `size` is only reassigned by the Unix-only hardlink dedup below.
+        #[cfg_attr(not(unix), allow(unused_mut))]
         let mut size = allocated_size(&meta);
         #[cfg(unix)]
         {
