@@ -73,13 +73,19 @@ pub fn open_trash() {
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = Command::new("explorer").arg("shell:RecycleBinFolder").spawn();
+        let _ = Command::new("explorer")
+            .arg("shell:RecycleBinFolder")
+            .spawn();
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
         // `gio` understands the trash: scheme everywhere GTK runs; xdg-open
         // is the fallback when it's missing.
-        if Command::new("gio").args(["open", "trash:///"]).spawn().is_err() {
+        if Command::new("gio")
+            .args(["open", "trash:///"])
+            .spawn()
+            .is_err()
+        {
             let _ = Command::new("xdg-open").arg("trash:///").spawn();
         }
     }
