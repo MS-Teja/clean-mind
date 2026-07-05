@@ -1,12 +1,17 @@
 # Clean Mind
 
+[![CI](https://github.com/MS-Teja/clean-mind/actions/workflows/ci.yml/badge.svg)](https://github.com/MS-Teja/clean-mind/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/MS-Teja/clean-mind?include_prereleases)](https://github.com/MS-Teja/clean-mind/releases/latest)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 **See what fills your disk — and understand what is safe to reclaim.**
 
 Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk usage analyzer in the spirit of OmniDiskSweeper and DaisyDisk, built for developers. Beyond showing *what* takes space, it identifies developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and classifies everything by **regenerability**, optionally with help from an LLM you control.
 
-> ⚠️ Early development, but the core loop works end to end: scan → interactive
-> treemap → tiered insights → move-to-Trash, with an optional bring-your-own-LLM
-> analysis pass. See [CONTRIBUTING.md](CONTRIBUTING.md) to add cleanup rules.
+> The full loop works end to end — scan → interactive treemap → tiered
+> insights → move-to-Trash, with an optional bring-your-own-LLM analysis pass.
+> macOS is the primary platform; Linux and Windows builds are experimental.
+> See [CONTRIBUTING.md](CONTRIBUTING.md) to add cleanup rules.
 
 ## How it works
 
@@ -33,6 +38,8 @@ Grab the build for your platform from the [latest release](https://github.com/MS
 - *macOS 15 and later:* open the app once (it will be blocked), then **System Settings → Privacy & Security → Open Anyway**.
 - *macOS 14 and earlier:* right-click the app → **Open** → **Open**.
 - Or from a terminal: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
+
+On first scan, macOS will ask for access to folders like Documents and Desktop — that's the normal per-folder permission prompt. For complete results (Mail, Safari, and other protected data), grant **Full Disk Access**; the app detects when it's missing and offers a shortcut to the right settings pane.
 
 **Linux** *(experimental)* — extract the tarball and run `clean_mind`. Requires GTK 3.
 
