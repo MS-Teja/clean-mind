@@ -156,7 +156,11 @@ jobs:
             ## Install
 
             ### macOS
-            Download the DMG, open it, drag **Clean Mind** to Applications.
+            Easiest via Homebrew (no Gatekeeper hoops):
+            ```
+            brew install --cask MS-Teja/clean-mind/clean-mind
+            ```
+            Or download the DMG, open it, drag **Clean Mind** to Applications.
 
             This free app is not notarized (there is no paid Apple Developer account behind it), so the first launch needs one extra step:
             - **macOS 15 (Sequoia) and later:** open the app once (it will be blocked), then go to **System Settings → Privacy & Security**, scroll down to *"Clean Mind" was blocked*, and click **Open Anyway**.

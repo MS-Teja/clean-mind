@@ -60,7 +60,13 @@ The LLM is never trusted on its own:
 
 Grab the build for your platform from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest).
 
-**macOS** — open the DMG and drag **Clean Mind** to Applications. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
+**macOS (Homebrew, recommended)** — installs and opens like any other app, no Gatekeeper hoops:
+
+```sh
+brew install --cask MS-Teja/clean-mind/clean-mind
+```
+
+**macOS (DMG)** — open the DMG and drag **Clean Mind** to Applications. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
 
 - *macOS 15 and later:* open the app once (it will be blocked), then **System Settings → Privacy & Security → Open Anyway**.
 - *macOS 14 and earlier:* right-click the app → **Open** → **Open**.
