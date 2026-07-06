@@ -19,6 +19,8 @@ Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk us
 > macOS is the primary platform; Linux and Windows builds are experimental.
 > See [CONTRIBUTING.md](CONTRIBUTING.md) to add cleanup rules.
 
+![Clean Mind in action: scan, treemap, insights, move to Trash](docs/demo.gif)
+
 ## Why Clean Mind
 
 - 🗺️ **A treemap that makes sense** — a squarified, drill-down map of your disk with breadcrumbs and tier-colored badges, so the biggest space hogs are the biggest tiles.
@@ -66,7 +68,7 @@ Grab the build for your platform from the [latest release](https://github.com/MS
 
 On first scan, macOS will ask for access to folders like Documents and Desktop — that's the normal per-folder permission prompt. For complete results (Mail, Safari, and other protected data), grant **Full Disk Access**; the app detects when it's missing and offers a shortcut to the right settings pane.
 
-**Linux** *(experimental)* — extract the tarball and run `clean_mind`. Requires GTK 3.
+**Linux** *(experimental)* — extract the tarball, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
 
 **Windows** *(experimental)* — extract the zip and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
 
@@ -113,8 +115,8 @@ macOS is the primary, best-tested platform. Linux and Windows build and pass the
 full CI suite on every push, but have had less hands-on testing — bug reports on
 those platforms are especially welcome.
 
-On the near-term list: real screenshots and a demo GIF, more cleanup rules
-(contributions welcome — see below), and surfacing restore-from-Trash in the UI.
+On the near-term list: more cleanup rules (contributions welcome — see below)
+and surfacing restore-from-Trash in the UI.
 
 ## Contributing
 
