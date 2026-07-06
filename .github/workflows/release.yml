@@ -91,6 +91,7 @@ jobs:
           cp -R build/linux/x64/release/bundle/. staging/clean-mind/
           cp packaging/linux/io.github.msteja.cleanmind.desktop staging/clean-mind/
           cp packaging/linux/io.github.msteja.cleanmind.png staging/clean-mind/
+          install -m 755 packaging/linux/install.sh staging/clean-mind/
           tar -czf "CleanMind-${VERSION}-linux-x64.tar.gz" -C staging clean-mind
 
       - uses: actions/upload-artifact@v4
@@ -163,7 +164,7 @@ jobs:
             - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
 
             ### Linux (experimental)
-            Extract the tarball and run `./clean-mind/clean_mind`. Requires GTK 3.
+            Extract the tarball, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
 
             ### Windows (experimental)
             Extract the zip and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.

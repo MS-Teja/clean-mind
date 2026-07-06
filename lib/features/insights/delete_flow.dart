@@ -7,6 +7,7 @@ import '../../src/rust/api/scan.dart';
 import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../util/format.dart';
+import '../../util/platform.dart';
 import '../results/tree_providers.dart';
 
 /// Move items to the OS Trash after a lightweight confirmation.
@@ -29,7 +30,7 @@ Future<void> confirmAndTrash(
           color: Theme.of(context).colorScheme.primary,
         ),
       ),
-      title: const Text('Move to Trash?'),
+      title: Text('Move to $trashName?'),
       content: nodes.length == 1
           ? RichText(
               text: TextSpan(
@@ -42,8 +43,9 @@ Future<void> confirmAndTrash(
                     text: formatBytes(total),
                     style: mono(13, weight: FontWeight.w600),
                   ),
-                  const TextSpan(
-                    text: ') will move to the Trash. You can restore it from there.',
+                  TextSpan(
+                    text:
+                        ') will move to the $trashName. You can restore it from there.',
                   ),
                 ],
               ),
@@ -57,8 +59,9 @@ Future<void> confirmAndTrash(
                     text: formatBytes(total),
                     style: mono(13, weight: FontWeight.w600),
                   ),
-                  const TextSpan(
-                    text: ') will move to the Trash. You can restore them from there.',
+                  TextSpan(
+                    text:
+                        ') will move to the $trashName. You can restore them from there.',
                   ),
                 ],
               ),
@@ -70,7 +73,7 @@ Future<void> confirmAndTrash(
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Move to Trash'),
+          child: Text('Move to $trashName'),
         ),
       ],
     ),
@@ -79,7 +82,7 @@ Future<void> confirmAndTrash(
   final outcomes =
       await moveToTrash(nodeIds: Int64List.fromList([for (final n in nodes) n.id]));
   if (!context.mounted) return;
-  _reportOutcomes(context, ref, nodes, outcomes, 'Moved to Trash',
+  _reportOutcomes(context, ref, nodes, outcomes, 'Moved to $trashName',
       trashed: true);
 }
 
@@ -123,8 +126,9 @@ Future<void> confirmAndDeletePermanently(
                           text: formatBytes(total),
                           style: mono(13, weight: FontWeight.w600),
                         ),
-                        const TextSpan(
-                          text: ') will be deleted immediately. This cannot be undone — nothing goes to the Trash.',
+                        TextSpan(
+                          text:
+                              ') will be deleted immediately. This cannot be undone — nothing goes to the $trashName.',
                         ),
                       ],
                     ),
@@ -138,8 +142,9 @@ Future<void> confirmAndDeletePermanently(
                           text: formatBytes(total),
                           style: mono(13, weight: FontWeight.w600),
                         ),
-                        const TextSpan(
-                          text: ') will be deleted immediately. This cannot be undone — nothing goes to the Trash.',
+                        TextSpan(
+                          text:
+                              ') will be deleted immediately. This cannot be undone — nothing goes to the $trashName.',
                         ),
                       ],
                     ),
@@ -208,7 +213,7 @@ void _reportOutcomes(BuildContext context, WidgetRef ref, List<FsNode> nodes,
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(message),
     action: trashed && succeededIds.isNotEmpty
-        ? SnackBarAction(label: 'Open Trash', onPressed: openTrash)
+        ? SnackBarAction(label: 'Open $trashName', onPressed: openTrash)
         : null,
   ));
 }

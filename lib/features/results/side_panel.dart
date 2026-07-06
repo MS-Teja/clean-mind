@@ -7,6 +7,7 @@ import '../../src/rust/api/scan.dart';
 import '../../theme.dart';
 import '../../ui/widgets.dart';
 import '../../util/format.dart';
+import '../../util/platform.dart';
 import '../insights/delete_flow.dart';
 import 'tree_providers.dart';
 
@@ -182,7 +183,7 @@ class SidePanel extends ConsumerWidget {
                   Expanded(
                     child: FilledButton.tonalIcon(
                       icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: const Text('Trash'),
+                      label: Text(trashName),
                       onPressed: () => confirmAndTrash(context, ref, [node]),
                     ),
                   ),

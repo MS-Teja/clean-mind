@@ -7,6 +7,7 @@ import '../../src/rust/api/scan.dart';
 import '../../theme.dart';
 import '../../ui/widgets.dart';
 import '../../util/format.dart';
+import '../../util/platform.dart';
 import '../results/tree_providers.dart';
 import '../settings/settings_dialog.dart';
 import '../settings/settings_providers.dart';
@@ -230,7 +231,7 @@ class _SelectionBar extends StatelessWidget {
             const SizedBox(width: 4),
             FilledButton.icon(
               icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Move to Trash'),
+              label: Text('Move to $trashName'),
               onPressed: onTrash,
             ),
           ],
@@ -593,7 +594,7 @@ class _AiTile extends ConsumerWidget {
                       confirmAndTrash(context, ref, [node]);
                     }
                   },
-                  child: const Text('Move to Trash'),
+                  child: Text('Move to $trashName'),
                 ),
             ],
           ),

@@ -9,6 +9,7 @@ import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../ui/widgets.dart';
 import '../../util/format.dart';
+import '../../util/platform.dart';
 import '../insights/insights_providers.dart';
 import '../results/results_screen.dart';
 import '../results/tree_providers.dart';
@@ -91,10 +92,10 @@ class _LandingView extends ConsumerWidget {
                       path: homeDirPath(),
                     ),
                     const SizedBox(width: 8),
-                    const _PresetChip(
+                    _PresetChip(
                       icon: Icons.storage_rounded,
                       label: 'Entire disk',
-                      path: '/',
+                      path: diskRootPath,
                     ),
                   ],
                 ),
