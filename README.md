@@ -10,6 +10,12 @@
 [![Latest release](https://img.shields.io/github/v/release/MS-Teja/clean-mind?include_prereleases)](https://github.com/MS-Teja/clean-mind/releases/latest)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+```sh
+brew install --cask MS-Teja/clean-mind/clean-mind
+```
+
+<sub>macOS · [Linux and Windows builds](#install) on the releases page</sub>
+
 </div>
 
 Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk usage analyzer in the spirit of OmniDiskSweeper and DaisyDisk, built for developers. Beyond showing *what* takes space, it identifies developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and classifies everything by **regenerability**, optionally with help from an LLM you control.
@@ -46,7 +52,7 @@ The insights panel groups reclaimable items and, for each one, explains *why* it
 - **Understand** — an interactive treemap shows where the space went.
 - **Classify** — a deterministic rules engine recognizes known developer artifacts (`node_modules`, cargo `target/`, Xcode DerivedData, Docker images, package-manager caches, …) and marks them by how safely they regenerate.
 - **Ask** — optionally, an aggregated view of your largest directories (metadata only, never file contents) is sent to an LLM *you* configure — your own Anthropic/OpenAI-compatible API key, or a fully local model via Ollama — which explains what can go and why.
-- **Clean** — deletions go to the OS Trash by default and are recoverable. Permanent deletion exists only behind an explicit confirmation.
+- **Clean** — deletions go to the OS Trash (Recycle Bin on Windows) by default and are recoverable. Permanent deletion exists only behind an explicit confirmation.
 
 ### Trust model
 
