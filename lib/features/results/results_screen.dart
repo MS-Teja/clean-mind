@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
@@ -8,6 +9,7 @@ import '../insights/insights_providers.dart';
 import '../insights/insights_sheet.dart';
 import '../scan/scan_providers.dart';
 import '../settings/settings_dialog.dart';
+import 'list_view.dart';
 import 'side_panel.dart';
 import 'tree_providers.dart';
 import 'treemap/treemap_view.dart';
@@ -21,52 +23,198 @@ class ResultsScreen extends ConsumerWidget {
     final scan = ref.watch(scanControllerProvider);
     final partial = scan is ScanDone && scan.partial;
     final errors = scan is ScanDone ? scan.progress.errors : 0;
+    final searching = ref.watch(searchQueryProvider).trim().isNotEmpty;
+    final view = ref.watch(resultsViewProvider);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                const Expanded(child: _Breadcrumbs()),
-                const SizedBox(width: 12),
-                const _FocusReadout(),
-                const SizedBox(width: 12),
-                _ReclaimablePill(bytes: reclaimable),
-                const SizedBox(width: 6),
-                IconButton(
-                  tooltip: 'New scan',
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: () =>
-                      ref.read(scanControllerProvider.notifier).reset(),
+    final trail = ref.read(focusTrailProvider.notifier);
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.bracketLeft, meta: true):
+            trail.goBack,
+        const SingleActivator(LogicalKeyboardKey.bracketLeft, control: true):
+            trail.goBack,
+        const SingleActivator(LogicalKeyboardKey.bracketRight, meta: true):
+            trail.goForward,
+        const SingleActivator(LogicalKeyboardKey.bracketRight, control: true):
+            trail.goForward,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          body: Column(
+            children: [
+              Container(
+                height: 60,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: [
+                    const _NavButtons(),
+                    const SizedBox(width: 4),
+                    const Expanded(child: _Breadcrumbs()),
+                    const SizedBox(width: 10),
+                    const _SearchField(),
+                    const SizedBox(width: 10),
+                    _ReclaimablePill(bytes: reclaimable),
+                    const SizedBox(width: 6),
+                    const _ViewToggle(),
+                    IconButton(
+                      tooltip: 'New scan',
+                      icon: const Icon(Icons.refresh_rounded),
+                      onPressed: () =>
+                          ref.read(scanControllerProvider.notifier).reset(),
+                    ),
+                    IconButton(
+                      tooltip: 'Settings',
+                      icon: const Icon(Icons.settings_rounded),
+                      onPressed: () => showSettingsDialog(context),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  tooltip: 'Settings',
-                  icon: const Icon(Icons.settings_rounded),
-                  onPressed: () => showSettingsDialog(context),
-                ),
-              ],
-            ),
-          ),
-          if (partial || errors > 0)
-            _ScanCaveats(partial: partial, errors: errors),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Expanded(child: TreemapView()),
-                  const SizedBox(width: 12),
-                  SizedBox(width: 300, child: SidePanel()),
-                ],
               ),
-            ),
+              if (partial || errors > 0)
+                _ScanCaveats(partial: partial, errors: errors),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: searching
+                            ? const SearchResultsView()
+                            : view == ResultsView.list
+                                ? const ListDirView()
+                                : const TreemapView(),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(width: 300, child: SidePanel()),
+                    ],
+                  ),
+                ),
+              ),
+              const _Legend(),
+            ],
           ),
-          const _Legend(),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Browser-style back/forward through visited folders.
+class _NavButtons extends ConsumerWidget {
+  const _NavButtons();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuild when the trail changes so enabled-state stays fresh.
+    ref.watch(focusTrailProvider);
+    final trail = ref.read(focusTrailProvider.notifier);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Back',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.arrow_back_rounded, size: 20),
+          onPressed: trail.canGoBack ? trail.goBack : null,
+        ),
+        IconButton(
+          tooltip: 'Forward',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+          onPressed: trail.canGoForward ? trail.goForward : null,
+        ),
+      ],
+    );
+  }
+}
+
+/// Treemap ⇄ list toggle for the current directory.
+class _ViewToggle extends ConsumerWidget {
+  const _ViewToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final view = ref.watch(resultsViewProvider);
+    final ctrl = ref.read(resultsViewProvider.notifier);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Treemap',
+          visualDensity: VisualDensity.compact,
+          isSelected: view == ResultsView.treemap,
+          icon: const Icon(Icons.grid_view_rounded, size: 20),
+          onPressed: () => ctrl.set(ResultsView.treemap),
+        ),
+        IconButton(
+          tooltip: 'List',
+          visualDensity: VisualDensity.compact,
+          isSelected: view == ResultsView.list,
+          icon: const Icon(Icons.view_list_rounded, size: 20),
+          onPressed: () => ctrl.set(ResultsView.list),
+        ),
+      ],
+    );
+  }
+}
+
+/// Whole-scan search box. Filters by name across the entire tree.
+class _SearchField extends ConsumerStatefulWidget {
+  const _SearchField();
+
+  @override
+  ConsumerState<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends ConsumerState<_SearchField> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Keep the field in sync when a new scan clears the query.
+    final query = ref.watch(searchQueryProvider);
+    if (query.isEmpty && _controller.text.isNotEmpty) {
+      _controller.clear();
+    }
+    return SizedBox(
+      width: 210,
+      height: 36,
+      child: TextField(
+        controller: _controller,
+        onChanged: (v) => ref.read(searchQueryProvider.notifier).set(v),
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(fontSize: 13),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Search this scan',
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 34, minHeight: 34),
+          suffixIcon: query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  onPressed: () =>
+                      ref.read(searchQueryProvider.notifier).set(''),
+                ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          filled: true,
+          fillColor: scheme.surfaceContainerHigh,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(999),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
     );
   }
@@ -116,26 +264,38 @@ class _ScanCaveats extends StatelessWidget {
             Flexible(
               child: Tooltip(
                 message: 'Usually permission-protected folders. On macOS, '
-                    'granting Full Disk Access reduces this.',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline_rounded,
-                        size: 13, color: scheme.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        '$errors item${errors == 1 ? '' : 's'} '
-                        "couldn't be read",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant
-                              .withValues(alpha: 0.75),
-                        ),
+                    'granting Full Disk Access reduces this. Click to see which.',
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => _showSkippedPaths(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 13, color: scheme.onSurfaceVariant),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '$errors item${errors == 1 ? '' : 's'} '
+                              "couldn't be read",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant
+                                    .withValues(alpha: 0.75),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -143,6 +303,61 @@ class _ScanCaveats extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Dialog listing the itemized paths that couldn't be read during the scan.
+void _showSkippedPaths(BuildContext context) {
+  final paths = scanSkippedPaths();
+  showDialog<void>(
+    context: context,
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      return AlertDialog(
+        title: const Text("Folders that couldn't be read"),
+        content: SizedBox(
+          width: 520,
+          child: paths.isEmpty
+              ? const Text(
+                  'No specific paths were recorded for this scan.\n\n'
+                  'These are usually permission-protected system folders. On '
+                  'macOS, granting Full Disk Access in System Settings reduces '
+                  'this.')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Skipped during the scan (usually permission-protected). '
+                      'On macOS, Full Disk Access reduces this.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: paths.length,
+                        itemBuilder: (context, i) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: SelectableText(
+                            paths[i],
+                            style: mono(11.5, color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 /// Reclaimable total as a tappable emerald pill; falls back to a quieter
@@ -217,35 +432,6 @@ class _ReclaimablePill extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Compact size/counts readout for the current focus, right of the crumbs.
-class _FocusReadout extends ConsumerWidget {
-  const _FocusReadout();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final focus = ref.watch(focusNodeProvider);
-    if (focus == null || focus.kind != FsKind.dir) {
-      return const SizedBox.shrink();
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(formatBytes(focus.size),
-            style: mono(13,
-                weight: FontWeight.w600, color: theme.colorScheme.onSurface)),
-        const SizedBox(width: 8),
-        Text(
-          '${formatCount(focus.fileCount)} files · '
-          '${formatCount(focus.dirCount)} folders',
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-      ],
     );
   }
 }
