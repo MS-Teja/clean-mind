@@ -230,8 +230,8 @@ header.nav.scrolled {
 .hero { padding: 62px 0 34px; }
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.04fr 0.96fr;
-  gap: 54px;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 48px;
   align-items: center;
 }
 /* Let grid/flex children shrink below their content's intrinsic width so the
@@ -586,59 +586,17 @@ section { padding: 76px 0; }
 .privacy-list b { font-weight: 600; font-size: 15px; }
 .privacy-list span { color: var(--ink-2); font-size: 14px; display: block; margin-top: 2px; }
 
-/* ---- Install ---- */
-.install-tabs {
-  display: inline-flex;
-  gap: 6px;
-  padding: 5px;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  margin-top: 36px;
-}
-.install-tabs button {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--ink-2);
-  background: transparent;
-  border: none;
-  border-radius: 999px;
-  padding: 9px 20px;
-  cursor: pointer;
-  transition: color 0.2s, background 0.2s;
-}
-.install-tabs button[aria-selected="true"] {
-  color: var(--mint-ink);
-  background: var(--mint);
-}
-.install-panels { margin-top: 26px; }
-.panel { display: none; }
-.panel[data-active="true"] { display: block; }
-.panel-card {
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 30px 30px 32px;
-  max-width: 760px;
-}
-.panel-card h3 { margin: 0 0 6px; font-size: 20px; letter-spacing: -0.015em; }
-.panel-card .tag {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--review);
-}
-.panel-card p { color: var(--ink-2); font-size: 15px; margin: 14px 0 0; }
+/* ---- Inline code block (reused in download cards) ---- */
 .code-block {
-  margin-top: 18px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: var(--ground-2);
   border: 1px solid var(--hairline);
-  border-radius: 12px;
-  padding: 14px 14px 14px 18px;
+  border-radius: 11px;
+  padding: 12px 12px 12px 15px;
   font-family: var(--mono);
-  font-size: 14px;
+  font-size: 13px;
   overflow-x: auto;
 }
 .code-block .prompt { color: var(--mint); flex: none; }
@@ -655,12 +613,6 @@ section { padding: 76px 0; }
 }
 .code-block button:hover { color: var(--mint); border-color: var(--mint); }
 .code-block button.copied { color: var(--safe); border-color: var(--safe); }
-.panel-card ol { margin: 18px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 14.5px; }
-.panel-card ol li { margin: 7px 0; }
-.panel-card ol code, .panel-card p code {
-  font-family: var(--mono); font-size: 0.86em; color: var(--ink);
-  background: var(--surface-3); padding: 1px 5px; border-radius: 5px;
-}
 
 /* ---- Final CTA ---- */
 .final {
@@ -700,11 +652,12 @@ footer {
   font-family: var(--mono); font-size: 12.5px; color: var(--ink-3);
 }
 
-/* ---- Reveal animation ---- */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
-.reveal.in { opacity: 1; transform: none; }
+/* ---- Reveal animation (progressive: only hidden once JS marks html.js) ---- */
+.reveal { transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+html.js .reveal:not(.in) { opacity: 0; transform: translateY(22px); }
 @media (prefers-reduced-motion: reduce) {
-  .reveal { opacity: 1; transform: none; transition: none; }
+  html.js .reveal:not(.in) { opacity: 1; transform: none; }
+  .reveal { transition: none; }
 }
 
 :focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; border-radius: 4px; }
@@ -731,4 +684,256 @@ footer {
   section { padding: 58px 0; }
   .hero-cta .btn, .hero-cta .install-cmd { width: 100%; }
   .final { padding: 44px 22px; }
+}
+
+/* ============================================================
+   v2 — 3D skyline, atmosphere, animated headline, downloads
+   ============================================================ */
+
+/* Film grain — a hair of texture over the flat ground */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* keep real content above the grain */
+header.nav, section, footer { position: relative; z-index: 1; }
+
+/* ---- Hero framing + ring motif (echoes the app icon) ---- */
+.hero { position: relative; padding: 58px 0 40px; overflow: hidden; }
+.hero-rings {
+  position: absolute;
+  top: 46%;
+  right: -6%;
+  width: 640px;
+  height: 640px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+.hero-rings span {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 50%;
+  border: 1px solid rgba(58, 223, 180, 0.16);
+}
+.hero-rings span:nth-child(1) { width: 100%; height: 100%; }
+.hero-rings span:nth-child(2) { width: 68%; height: 68%; border-color: rgba(58, 223, 180, 0.22); }
+.hero-rings span:nth-child(3) { width: 38%; height: 38%; border-color: rgba(58, 223, 180, 0.30); }
+.hero .wrap { position: relative; z-index: 1; }
+
+/* ---- Animated headline (single-block mask reveal — robust across wraps) ---- */
+.hero h1 { font-size: clamp(38px, 5vw, 58px); overflow: hidden; padding-bottom: 0.09em; }
+.hero h1 .h1-inner { display: block; transform: translateY(104%); will-change: transform; }
+.hero h1 em { font-style: normal; color: var(--mint); }
+@keyframes lineUp { from { transform: translateY(104%); } to { transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.hero h1 .h1-inner { animation: lineUp 1s var(--ease) 0.12s both; }
+.reveal-line { opacity: 0; animation: fadeUp 0.75s var(--ease) both; }
+.hero-copy > .reveal-line:nth-child(1) { animation-delay: 0.05s; }
+.hero-copy > .reveal-line:nth-child(3) { animation-delay: 0.34s; }
+.hero-copy > .reveal-line:nth-child(4) { animation-delay: 0.46s; }
+.hero-copy > .reveal-line:nth-child(5) { animation-delay: 0.56s; }
+.hero-copy > .reveal-line:nth-child(6) { animation-delay: 0.66s; }
+
+/* ---- 3D skyline stage ---- */
+.skyline-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.12 / 1;
+  border-radius: var(--radius-lg);
+}
+.sky-glow {
+  position: absolute;
+  inset: 8% 4% 12% 4%;
+  z-index: 0;
+  background: radial-gradient(60% 55% at 58% 42%, rgba(58, 223, 180, 0.20), transparent 70%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+#skyline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease);
+  touch-action: pan-y;
+}
+#skyline.ready { opacity: 1; }
+#skyline-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  align-items: center;
+}
+#skyline-fallback:not([hidden]) { display: flex; }
+#skyline-fallback .map-card { width: 100%; }
+
+.sky-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ground) 72%, transparent);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(8px);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.sky-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sky-legend i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+
+.sky-label {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 4;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ground-2) 92%, transparent);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.sky-label.show { opacity: 1; }
+.sky-label .p { color: var(--ink-3); }
+.sky-label .n { color: var(--ink); font-weight: 600; }
+.sky-label .mb { color: var(--ink-2); }
+.sky-label b { font-weight: 600; }
+.sky-label b.s { color: var(--safe); }
+.sky-label b.p { color: var(--ink-2); }
+
+.sky-hint {
+  margin: 14px 0 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+/* ---- Download cards ---- */
+.ver-pill {
+  font-family: var(--mono);
+  font-size: 0.5em;
+  font-weight: 600;
+  vertical-align: middle;
+  color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mint) 30%, transparent);
+  border-radius: 999px;
+  padding: 3px 11px;
+  letter-spacing: 0.02em;
+}
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 46px;
+  align-items: stretch;
+}
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  transition: transform 0.3s var(--ease), border-color 0.3s;
+}
+.dl-card:hover { transform: translateY(-4px); }
+.dl-card[data-os="mac"] {
+  border-color: color-mix(in srgb, var(--mint) 34%, var(--hairline));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mint) 5%, var(--surface)), var(--surface));
+}
+.dl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--hairline);
+}
+.dl-os { display: flex; align-items: center; gap: 13px; }
+.dl-os > svg { width: 26px; height: 26px; color: var(--ink); flex: none; }
+.dl-os h3 { margin: 0; font-size: 19px; letter-spacing: -0.01em; }
+.dl-sub { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.dl-flag {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--review);
+  background: color-mix(in srgb, var(--review) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--review) 30%, transparent);
+  border-radius: 999px; padding: 4px 9px; white-space: nowrap;
+}
+.dl-body { display: flex; flex-direction: column; gap: 14px; padding: 22px; flex: 1; }
+.dl-lead { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+.dl-lead code, .dl-note code {
+  font-family: var(--mono); font-size: 0.85em; color: var(--ink);
+  background: var(--surface-3); padding: 1px 5px; border-radius: 5px;
+}
+.dl-primary { width: 100%; justify-content: center; margin-top: auto; }
+.dl-secondary {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: var(--ground-2);
+  color: var(--ink);
+  font-size: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.dl-secondary:hover { border-color: var(--mint); transform: translateY(-1px); }
+.dl-secondary svg { width: 17px; height: 17px; color: var(--mint); flex: none; }
+.dl-secondary b { font-weight: 600; }
+.dl-secondary .dl-size { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.dl-meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+}
+.dl-note { margin: 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.dl-foot { margin: 28px 0 0; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
+.dl-foot a { color: var(--mint); }
+
+/* ---- v2 responsive ---- */
+@media (max-width: 940px) {
+  .hero-rings { display: none; }
+  .skyline-stage { max-width: 560px; margin: 0 auto; }
+  .dl-grid { grid-template-columns: 1fr; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .dl-card[data-os="mac"] { order: -1; }
+}
+@media (max-width: 560px) {
+  .hero h1 { font-size: clamp(34px, 10vw, 44px); }
+  .skyline-stage { aspect-ratio: 1 / 1; }
+  .sky-legend { font-size: 10px; gap: 5px 10px; padding: 8px 10px; }
+  .sky-hint { display: none; }
+}
+
+/* ---- Reduced motion: hold everything still ---- */
+@media (prefers-reduced-motion: reduce) {
+  .hero h1 .h1-inner { transform: none; animation: none; }
+  .reveal-line { opacity: 1; animation: none; }
+  #skyline { transition: none; }
+  .hero-rings { display: none; }
 }
