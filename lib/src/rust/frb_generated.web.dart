@@ -72,6 +72,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Insight dco_decode_insight(dynamic raw);
 
   @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
   List<AiRecommendation> dco_decode_list_ai_recommendation(dynamic raw);
 
   @protected
@@ -79,6 +82,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Insight> dco_decode_list_insight(dynamic raw);
+
+  @protected
+  List<Location> dco_decode_list_location(dynamic raw);
 
   @protected
   List<OpOutcome> dco_decode_list_op_outcome(dynamic raw);
@@ -91,6 +97,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LlmSettings dco_decode_llm_settings(dynamic raw);
+
+  @protected
+  Location dco_decode_location(dynamic raw);
 
   @protected
   OpOutcome dco_decode_op_outcome(dynamic raw);
@@ -106,6 +115,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScanStage dco_decode_scan_stage(dynamic raw);
+
+  @protected
+  SortKey dco_decode_sort_key(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -164,6 +176,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Insight sse_decode_insight(SseDeserializer deserializer);
 
   @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
   List<AiRecommendation> sse_decode_list_ai_recommendation(
     SseDeserializer deserializer,
   );
@@ -173,6 +188,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<Insight> sse_decode_list_insight(SseDeserializer deserializer);
+
+  @protected
+  List<Location> sse_decode_list_location(SseDeserializer deserializer);
 
   @protected
   List<OpOutcome> sse_decode_list_op_outcome(SseDeserializer deserializer);
@@ -185,6 +203,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LlmSettings sse_decode_llm_settings(SseDeserializer deserializer);
+
+  @protected
+  Location sse_decode_location(SseDeserializer deserializer);
 
   @protected
   OpOutcome sse_decode_op_outcome(SseDeserializer deserializer);
@@ -200,6 +221,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ScanStage sse_decode_scan_stage(SseDeserializer deserializer);
+
+  @protected
+  SortKey sse_decode_sort_key(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -268,6 +292,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_insight(Insight self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_ai_recommendation(
     List<AiRecommendation> self,
     SseSerializer serializer,
@@ -278,6 +305,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_insight(List<Insight> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_location(List<Location> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_op_outcome(
@@ -301,6 +331,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_llm_settings(LlmSettings self, SseSerializer serializer);
 
   @protected
+  void sse_encode_location(Location self, SseSerializer serializer);
+
+  @protected
   void sse_encode_op_outcome(OpOutcome self, SseSerializer serializer);
 
   @protected
@@ -317,6 +350,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scan_stage(ScanStage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sort_key(SortKey self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

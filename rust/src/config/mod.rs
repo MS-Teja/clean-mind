@@ -16,7 +16,14 @@ pub struct Settings {
     /// Last scan root the user picked; scan *data* is still never persisted.
     #[serde(default)]
     pub scan_root: Option<String>,
+    /// Most-recently-scanned roots (paths only — never scan data), newest
+    /// first, capped at [`RECENT_ROOTS_CAP`]. Powers the landing "recent scans".
+    #[serde(default)]
+    pub recent_roots: Vec<String>,
 }
+
+/// How many recent scan roots to remember.
+pub const RECENT_ROOTS_CAP: usize = 8;
 
 impl Default for Settings {
     fn default() -> Self {
@@ -26,7 +33,17 @@ impl Default for Settings {
             model: "claude-opus-4-8".into(),
             redact: false,
             scan_root: None,
+            recent_roots: Vec::new(),
         }
+    }
+}
+
+impl Settings {
+    /// Record `path` as the newest recent root (dedup, MRU-ordered, capped).
+    pub fn push_recent(&mut self, path: &str) {
+        self.recent_roots.retain(|p| p != path);
+        self.recent_roots.insert(0, path.to_string());
+        self.recent_roots.truncate(RECENT_ROOTS_CAP);
     }
 }
 

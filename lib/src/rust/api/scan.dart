@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `snapshot`, `to_fs_node`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Start a scan. Progress streams every ~120ms; the final item carries
 /// `stage: Done` (with the root id) / `Cancelled` (with root id >= 0 if
@@ -28,6 +28,41 @@ List<FsNode> getChildren({
   required PlatformInt64 limit,
 }) => RustLib.instance.api.crateApiScanGetChildren(id: id, limit: limit);
 
+/// Children of `id` sorted by `key` (descending unless `ascending`), for the
+/// list/table view. Like [`get_children`], anything past `limit` folds into a
+/// trailing `Rest` node so the UI stays bounded.
+List<FsNode> getChildrenSorted({
+  required PlatformInt64 id,
+  required SortKey key,
+  required bool ascending,
+  required PlatformInt64 limit,
+}) => RustLib.instance.api.crateApiScanGetChildrenSorted(
+  id: id,
+  key: key,
+  ascending: ascending,
+  limit: limit,
+);
+
+/// Search the whole scan for nodes whose name contains `query`
+/// (case-insensitive), largest first, capped at `limit`. Linear over the flat
+/// arena — cheap even for a home-directory scan. The root and the synthetic
+/// "(small files)" aggregates are excluded.
+List<FsNode> searchNodes({
+  required String query,
+  required PlatformInt64 limit,
+}) => RustLib.instance.api.crateApiScanSearchNodes(query: query, limit: limit);
+
+/// Ancestry chain from the root down to `id`, inclusive (root first, `id`
+/// last). Lets the UI rebuild the breadcrumb trail when jumping to an arbitrary
+/// node (search hit, "largest items" tap). Empty if `id` isn't in the scan.
+List<FsNode> nodeAncestry({required PlatformInt64 id}) =>
+    RustLib.instance.api.crateApiScanNodeAncestry(id: id);
+
+/// Paths that couldn't be read during the current scan (permission denied or
+/// past the depth guard), itemized and capped. Empty when nothing was skipped.
+List<String> scanSkippedPaths() =>
+    RustLib.instance.api.crateApiScanScanSkippedPaths();
+
 /// Home directory of the current user, the fallback scan root.
 String homeDirPath() => RustLib.instance.api.crateApiScanHomeDirPath();
 
@@ -35,9 +70,15 @@ String homeDirPath() => RustLib.instance.api.crateApiScanHomeDirPath();
 /// exists, otherwise the home directory.
 String defaultScanRoot() => RustLib.instance.api.crateApiScanDefaultScanRoot();
 
-/// Remember the picked scan root for the next launch.
+/// Remember the picked scan root for the next launch, and add it to the
+/// recent-scans list (paths only — never scan data).
 void setScanRoot({required String path}) =>
     RustLib.instance.api.crateApiScanSetScanRoot(path: path);
+
+/// Recently-scanned roots, newest first. Paths only; nothing about their
+/// contents is persisted. Non-existent paths are filtered out.
+List<String> recentScanRoots() =>
+    RustLib.instance.api.crateApiScanRecentScanRoots();
 
 enum FsKind {
   dir,
@@ -55,7 +96,12 @@ class FsNode {
   final String name;
   final String path;
   final FsKind kind;
+
+  /// On-disk (allocated) size.
   final PlatformInt64 size;
+
+  /// Apparent (logical) size; differs from `size` for clones/sparse files.
+  final PlatformInt64 logicalSize;
   final PlatformInt64 mtime;
   final PlatformInt64 fileCount;
   final PlatformInt64 dirCount;
@@ -72,6 +118,7 @@ class FsNode {
     required this.path,
     required this.kind,
     required this.size,
+    required this.logicalSize,
     required this.mtime,
     required this.fileCount,
     required this.dirCount,
@@ -90,6 +137,7 @@ class FsNode {
       path.hashCode ^
       kind.hashCode ^
       size.hashCode ^
+      logicalSize.hashCode ^
       mtime.hashCode ^
       fileCount.hashCode ^
       dirCount.hashCode ^
@@ -110,6 +158,7 @@ class FsNode {
           path == other.path &&
           kind == other.kind &&
           size == other.size &&
+          logicalSize == other.logicalSize &&
           mtime == other.mtime &&
           fileCount == other.fileCount &&
           dirCount == other.dirCount &&
@@ -169,3 +218,6 @@ class ScanProgress {
 }
 
 enum ScanStage { scanning, done, cancelled, failed }
+
+/// How to order children in [`get_children_sorted`].
+enum SortKey { size, name, items }

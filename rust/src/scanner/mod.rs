@@ -14,6 +14,21 @@ use crate::safety;
 /// keeping the tree small enough to hold and ship to the UI.
 pub const SMALL_FILE_THRESHOLD: u64 = 1_000_000;
 
+/// Defensive backstop against pathological/looping directory nesting. Real
+/// trees are rarely deeper than a few dozen levels; anything past this is
+/// recorded as skipped rather than descended into, so the parallel walk can't
+/// exhaust even a generously sized worker stack.
+const MAX_WALK_DEPTH: u32 = 1000;
+
+/// Worker-thread stack size for the scan pool. The walk is recursive over
+/// directory depth; a roomy stack plus [`MAX_WALK_DEPTH`] makes deep trees
+/// safe without rewriting the parallel post-order aggregation.
+const SCAN_STACK_SIZE: usize = 16 * 1024 * 1024;
+
+/// Most skipped paths we itemize; beyond this only the aggregate error count
+/// grows. Keeps the surfaced list bounded on a badly-permissioned disk.
+const SKIP_CAP: usize = 100;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeKind {
     Dir,
@@ -38,7 +53,11 @@ pub enum Tier {
 pub struct Node {
     pub name: String,
     pub kind: NodeKind,
+    /// Size actually allocated on disk (`st_blocks`-based on Unix).
     pub size: u64,
+    /// Apparent (logical) size — `meta.len()` summed. Differs from `size` for
+    /// APFS clones, sparse files, and block-rounding.
+    pub logical_size: u64,
     pub mtime: i64,
     pub parent: Option<u32>,
     /// Sorted by size, descending.
@@ -56,6 +75,9 @@ pub struct ScanStore {
     pub nodes: Vec<Node>,
     pub root: u32,
     pub errors: u64,
+    /// Paths that couldn't be read (permission denied, or past the depth
+    /// guard), capped at [`SKIP_CAP`]. Itemized so the UI can name them.
+    pub skipped: Vec<String>,
     pub rules: RuleSet,
 }
 
@@ -109,6 +131,20 @@ pub struct ProgressCounters {
     pub errors: AtomicU64,
     pub cancel: AtomicBool,
     pub current: Mutex<String>,
+    /// Paths that couldn't be read, capped at [`SKIP_CAP`]. The `errors`
+    /// counter still counts every failure; this only holds the first few names.
+    pub skipped: Mutex<Vec<String>>,
+}
+
+impl ProgressCounters {
+    fn record_skip(&self, path: &Path) {
+        self.errors.fetch_add(1, Ordering::Relaxed);
+        if let Ok(mut v) = self.skipped.lock() {
+            if v.len() < SKIP_CAP {
+                v.push(path.to_string_lossy().into_owned());
+            }
+        }
+    }
 }
 
 struct ScanCtx<'a> {
@@ -124,6 +160,7 @@ struct TmpNode {
     name: String,
     kind: NodeKind,
     size: u64,
+    logical_size: u64,
     mtime: i64,
     file_count: u64,
     dir_count: u64,
@@ -138,6 +175,7 @@ impl TmpNode {
             name,
             kind: NodeKind::Dir,
             size: 0,
+            logical_size: 0,
             mtime,
             file_count: 0,
             dir_count: 0,
@@ -166,15 +204,33 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> ScanSto
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| root.to_string_lossy().into_owned());
-    let tmp = walk(root, name, root_mtime, None, false, &ctx);
+
+    // Run the parallel walk on a pool with roomy worker stacks; the walk
+    // recurses over directory depth and Rayon may run children inline on the
+    // same worker, so the default (small) worker stack is the overflow risk.
+    let tmp = match rayon::ThreadPoolBuilder::new()
+        .stack_size(SCAN_STACK_SIZE)
+        .build()
+    {
+        Ok(pool) => pool.install(|| walk(root, name.clone(), root_mtime, None, false, 0, &ctx)),
+        // If the pool can't be built, fall back to the global pool rather than
+        // failing the scan outright.
+        Err(_) => walk(root, name, root_mtime, None, false, 0, &ctx),
+    };
 
     let mut nodes = Vec::new();
-    flatten(tmp, None, &mut nodes);
+    let root_id = flatten(tmp, &mut nodes);
+    let skipped = progress
+        .skipped
+        .lock()
+        .map(|v| v.clone())
+        .unwrap_or_default();
     let mut store = ScanStore {
         root_path: root.to_path_buf(),
         nodes,
-        root: 0,
+        root: root_id,
         errors: progress.errors.load(Ordering::Relaxed),
+        skipped,
         rules,
     };
     finalize(&mut store);
@@ -218,10 +274,17 @@ fn walk(
     mtime: i64,
     rule: Option<u16>,
     in_matched: bool,
+    depth: u32,
     ctx: &ScanCtx,
 ) -> TmpNode {
     let mut node = TmpNode::dir(name, mtime, rule);
     if ctx.progress.cancel.load(Ordering::Relaxed) {
+        return node;
+    }
+    // Defensive depth backstop: stop descending past MAX_WALK_DEPTH and record
+    // the path rather than risk exhausting the worker stack.
+    if depth >= MAX_WALK_DEPTH {
+        ctx.progress.record_skip(path);
         return node;
     }
     if let Ok(mut cur) = ctx.progress.current.lock() {
@@ -231,7 +294,7 @@ fn walk(
     let read = match fs::read_dir(path) {
         Ok(r) => r,
         Err(_) => {
-            ctx.progress.errors.fetch_add(1, Ordering::Relaxed);
+            ctx.progress.record_skip(path);
             return node;
         }
     };
@@ -270,6 +333,7 @@ fn walk(
     }
 
     let mut small_sum: u64 = 0;
+    let mut small_logical: u64 = 0;
     let mut small_count: u64 = 0;
     for (file_name, entry) in files {
         let meta = match entry.metadata() {
@@ -279,9 +343,11 @@ fn walk(
                 continue;
             }
         };
-        // `size` is only reassigned by the Unix-only hardlink dedup below.
+        // `size`/`logical` are only reassigned by the Unix-only hardlink dedup.
         #[cfg_attr(not(unix), allow(unused_mut))]
         let mut size = allocated_size(&meta);
+        #[cfg_attr(not(unix), allow(unused_mut))]
+        let mut logical = meta.len();
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
@@ -289,6 +355,7 @@ fn walk(
                 let key = (meta.dev(), meta.ino());
                 if !ctx.hardlinks.lock().unwrap().insert(key) {
                     size = 0; // already counted through another link
+                    logical = 0;
                 }
             }
         }
@@ -300,6 +367,7 @@ fn walk(
                 name: file_name,
                 kind: NodeKind::File,
                 size,
+                logical_size: logical,
                 mtime: mtime_of(&meta),
                 file_count: 1,
                 dir_count: 0,
@@ -309,6 +377,7 @@ fn walk(
             });
         } else {
             small_sum += size;
+            small_logical += logical;
             small_count += 1;
         }
     }
@@ -317,6 +386,7 @@ fn walk(
             name: String::from("(small files)"),
             kind: NodeKind::SmallFiles,
             size: small_sum,
+            logical_size: small_logical,
             mtime: 0,
             file_count: small_count,
             dir_count: 0,
@@ -341,6 +411,7 @@ fn walk(
                 dir_mtime,
                 r,
                 matched_here || r.is_some(),
+                depth + 1,
                 ctx,
             )
         })
@@ -351,33 +422,49 @@ fn walk(
     }
     node.children.append(&mut sub);
     node.size = node.children.iter().map(|c| c.size).sum();
+    node.logical_size = node.children.iter().map(|c| c.logical_size).sum();
     ctx.progress.dirs.fetch_add(1, Ordering::Relaxed);
     node
 }
 
-fn flatten(tmp: TmpNode, parent: Option<u32>, nodes: &mut Vec<Node>) -> u32 {
-    let id = nodes.len() as u32;
-    nodes.push(Node {
-        name: tmp.name,
-        kind: tmp.kind,
-        size: tmp.size,
-        mtime: tmp.mtime,
-        parent,
-        children: Vec::new(),
-        file_count: tmp.file_count,
-        dir_count: tmp.dir_count,
-        item_count: tmp.item_count,
-        rule: tmp.rule,
-        tier: Tier::None,
-    });
-    let mut children = tmp.children;
-    children.sort_by_key(|c| std::cmp::Reverse(c.size));
-    let child_ids: Vec<u32> = children
-        .into_iter()
-        .map(|c| flatten(c, Some(id), nodes))
-        .collect();
-    nodes[id as usize].children = child_ids;
-    id
+/// Flatten the temporary tree into the id-indexed arena. Iterative (explicit
+/// heap stack) so a deep tree can't overflow the native stack — the recursive
+/// version was the most likely overflow site. Produces the same DFS pre-order
+/// ids and size-descending child ordering as before: each node's whole subtree
+/// is numbered before its next sibling, largest child first. Returns the root
+/// id (always 0, since the root is pushed first).
+fn flatten(root: TmpNode, nodes: &mut Vec<Node>) -> u32 {
+    let mut root_id = 0;
+    // (node, parent id). Children are pushed largest-last so the largest is
+    // popped (and numbered) first — matching the old recursive order.
+    let mut stack: Vec<(TmpNode, Option<u32>)> = vec![(root, None)];
+    while let Some((mut tmp, parent)) = stack.pop() {
+        let id = nodes.len() as u32;
+        tmp.children.sort_by_key(|c| std::cmp::Reverse(c.size));
+        nodes.push(Node {
+            name: tmp.name,
+            kind: tmp.kind,
+            size: tmp.size,
+            logical_size: tmp.logical_size,
+            mtime: tmp.mtime,
+            parent,
+            children: Vec::new(),
+            file_count: tmp.file_count,
+            dir_count: tmp.dir_count,
+            item_count: tmp.item_count,
+            rule: tmp.rule,
+            tier: Tier::None,
+        });
+        match parent {
+            Some(p) => nodes[p as usize].children.push(id),
+            None => root_id = id,
+        }
+        let children = std::mem::take(&mut tmp.children);
+        for child in children.into_iter().rev() {
+            stack.push((child, Some(id)));
+        }
+    }
+    root_id
 }
 
 /// Post-passes that need full paths: home-relative rule matching, tier
@@ -567,5 +654,76 @@ mod tests {
         let store = scan_fixture(root);
         let root_node = store.node(store.root).unwrap();
         assert!(root_node.size < 6_000_000, "hardlinked file double-counted");
+    }
+
+    #[test]
+    fn logical_size_tracked_alongside_allocated() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_bytes(&root.join("big.bin"), 2_000_000);
+        let store = scan_fixture(root);
+        let big = store
+            .nodes
+            .iter()
+            .find(|n| n.name == "big.bin")
+            .expect("big file present");
+        // Logical is exactly the bytes written; allocated is block-rounded and
+        // at least as large. Both must be populated (non-zero).
+        assert_eq!(big.logical_size, 2_000_000);
+        assert!(big.size >= big.logical_size);
+        let root_node = store.node(store.root).unwrap();
+        assert!(root_node.logical_size >= 2_000_000);
+    }
+
+    #[test]
+    fn flatten_handles_deep_tree_without_overflow() {
+        // A 50k-deep chain would blow a recursive flatten's native stack; the
+        // iterative flatten must handle it. (The filesystem's own PATH_MAX caps
+        // how deep a *real* scanned tree can get, so this exercises the arena
+        // builder directly with a synthetic tree.)
+        const DEPTH: usize = 50_000;
+        let mut node = TmpNode::dir("leaf".into(), 0, None);
+        node.size = 1_500_000;
+        node.logical_size = 1_400_000;
+        for i in 0..DEPTH {
+            let mut parent = TmpNode::dir(format!("d{i}"), 0, None);
+            parent.size = node.size;
+            parent.logical_size = node.logical_size;
+            parent.children.push(node);
+            node = parent;
+        }
+
+        let mut nodes = Vec::new();
+        let root_id = flatten(node, &mut nodes);
+        assert_eq!(root_id, 0);
+        assert_eq!(nodes.len(), DEPTH + 1);
+        assert_eq!(nodes[0].size, 1_500_000);
+        assert_eq!(nodes[0].logical_size, 1_400_000);
+        // The last node has no children; every other has exactly one.
+        assert!(nodes.last().unwrap().children.is_empty());
+        assert_eq!(nodes[0].children.len(), 1);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_dir_is_itemized_as_skipped() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let locked = root.join("secret");
+        fs::create_dir(&locked).unwrap();
+        write_bytes(&locked.join("x.bin"), 1_500_000);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let store = scan_fixture(root);
+        // Restore perms so tempdir cleanup works regardless of the assertions.
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(store.errors >= 1);
+        assert!(
+            store.skipped.iter().any(|p| p.ends_with("secret")),
+            "unreadable dir must be named in skipped, got {:?}",
+            store.skipped
+        );
     }
 }

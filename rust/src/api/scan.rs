@@ -51,7 +51,10 @@ pub struct FsNode {
     pub name: String,
     pub path: String,
     pub kind: FsKind,
+    /// On-disk (allocated) size.
     pub size: i64,
+    /// Apparent (logical) size; differs from `size` for clones/sparse files.
+    pub logical_size: i64,
     pub mtime: i64,
     pub file_count: i64,
     pub dir_count: i64,
@@ -173,6 +176,7 @@ fn to_fs_node(store: &scanner::ScanStore, id: u32) -> FsNode {
             NodeKind::SmallFiles => FsKind::SmallFiles,
         },
         size: node.size as i64,
+        logical_size: node.logical_size as i64,
         mtime: node.mtime,
         file_count: node.file_count as i64,
         dir_count: node.dir_count as i64,
@@ -219,12 +223,17 @@ pub fn get_children(id: i64, limit: i64) -> Vec<FsNode> {
     if node.children.len() > limit {
         let rest = &node.children[limit..];
         let rest_size: u64 = rest.iter().map(|&c| store.nodes[c as usize].size).sum();
+        let rest_logical: u64 = rest
+            .iter()
+            .map(|&c| store.nodes[c as usize].logical_size)
+            .sum();
         out.push(FsNode {
             id: -1,
             name: format!("{} more items", rest.len()),
             path: String::new(),
             kind: FsKind::Rest,
             size: rest_size as i64,
+            logical_size: rest_logical as i64,
             mtime: 0,
             file_count: 0,
             dir_count: 0,
@@ -237,6 +246,138 @@ pub fn get_children(id: i64, limit: i64) -> Vec<FsNode> {
         });
     }
     out
+}
+
+/// How to order children in [`get_children_sorted`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortKey {
+    Size,
+    Name,
+    Items,
+}
+
+/// Children of `id` sorted by `key` (descending unless `ascending`), for the
+/// list/table view. Like [`get_children`], anything past `limit` folds into a
+/// trailing `Rest` node so the UI stays bounded.
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_children_sorted(id: i64, key: SortKey, ascending: bool, limit: i64) -> Vec<FsNode> {
+    let store = STORE.read().unwrap();
+    let Some(store) = store.as_ref() else {
+        return Vec::new();
+    };
+    let Some(node) = store.node(id as u32) else {
+        return Vec::new();
+    };
+    let mut ids: Vec<u32> = node.children.clone();
+    ids.sort_by(|&a, &b| {
+        let (na, nb) = (&store.nodes[a as usize], &store.nodes[b as usize]);
+        let ord = match key {
+            SortKey::Size => na.size.cmp(&nb.size),
+            SortKey::Name => na.name.to_lowercase().cmp(&nb.name.to_lowercase()),
+            SortKey::Items => (na.file_count + na.dir_count).cmp(&(nb.file_count + nb.dir_count)),
+        };
+        if ascending {
+            ord
+        } else {
+            ord.reverse()
+        }
+    });
+
+    let limit = limit.max(1) as usize;
+    let mut out: Vec<FsNode> = ids
+        .iter()
+        .take(limit)
+        .map(|&c| to_fs_node(store, c))
+        .collect();
+    if ids.len() > limit {
+        let rest = &ids[limit..];
+        let rest_size: u64 = rest.iter().map(|&c| store.nodes[c as usize].size).sum();
+        let rest_logical: u64 = rest
+            .iter()
+            .map(|&c| store.nodes[c as usize].logical_size)
+            .sum();
+        out.push(FsNode {
+            id: -1,
+            name: format!("{} more items", rest.len()),
+            path: String::new(),
+            kind: FsKind::Rest,
+            size: rest_size as i64,
+            logical_size: rest_logical as i64,
+            mtime: 0,
+            file_count: 0,
+            dir_count: 0,
+            item_count: rest.len() as i64,
+            child_count: 0,
+            tier: FsTier::None,
+            rule_id: None,
+            rule_name: None,
+            category: None,
+        });
+    }
+    out
+}
+
+/// Search the whole scan for nodes whose name contains `query`
+/// (case-insensitive), largest first, capped at `limit`. Linear over the flat
+/// arena — cheap even for a home-directory scan. The root and the synthetic
+/// "(small files)" aggregates are excluded.
+#[flutter_rust_bridge::frb(sync)]
+pub fn search_nodes(query: String, limit: i64) -> Vec<FsNode> {
+    let store = STORE.read().unwrap();
+    let Some(store) = store.as_ref() else {
+        return Vec::new();
+    };
+    let needle = query.trim().to_lowercase();
+    if needle.is_empty() {
+        return Vec::new();
+    }
+    let mut hits: Vec<u32> = store
+        .nodes
+        .iter()
+        .enumerate()
+        .filter(|(i, n)| {
+            *i as u32 != store.root
+                && n.kind != NodeKind::SmallFiles
+                && n.name.to_lowercase().contains(&needle)
+        })
+        .map(|(i, _)| i as u32)
+        .collect();
+    hits.sort_by_key(|&i| std::cmp::Reverse(store.nodes[i as usize].size));
+    hits.truncate(limit.max(1) as usize);
+    hits.iter().map(|&i| to_fs_node(store, i)).collect()
+}
+
+/// Ancestry chain from the root down to `id`, inclusive (root first, `id`
+/// last). Lets the UI rebuild the breadcrumb trail when jumping to an arbitrary
+/// node (search hit, "largest items" tap). Empty if `id` isn't in the scan.
+#[flutter_rust_bridge::frb(sync)]
+pub fn node_ancestry(id: i64) -> Vec<FsNode> {
+    let store = STORE.read().unwrap();
+    let Some(store) = store.as_ref() else {
+        return Vec::new();
+    };
+    if id < 0 || store.node(id as u32).is_none() {
+        return Vec::new();
+    }
+    let mut chain = Vec::new();
+    let mut cur = Some(id as u32);
+    while let Some(i) = cur {
+        chain.push(i);
+        cur = store.nodes[i as usize].parent;
+    }
+    chain.reverse();
+    chain.into_iter().map(|i| to_fs_node(store, i)).collect()
+}
+
+/// Paths that couldn't be read during the current scan (permission denied or
+/// past the depth guard), itemized and capped. Empty when nothing was skipped.
+#[flutter_rust_bridge::frb(sync)]
+pub fn scan_skipped_paths() -> Vec<String> {
+    let store = STORE.read().unwrap();
+    store
+        .as_ref()
+        .map(|s| s.skipped.clone())
+        .unwrap_or_default()
 }
 
 /// Home directory of the current user, the fallback scan root.
@@ -260,12 +401,25 @@ pub fn default_scan_root() -> String {
     home_dir_path()
 }
 
-/// Remember the picked scan root for the next launch.
+/// Remember the picked scan root for the next launch, and add it to the
+/// recent-scans list (paths only — never scan data).
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_scan_root(path: String) {
     let mut settings = crate::config::load();
+    settings.push_recent(&path);
     settings.scan_root = Some(path);
     let _ = crate::config::save(&settings);
+}
+
+/// Recently-scanned roots, newest first. Paths only; nothing about their
+/// contents is persisted. Non-existent paths are filtered out.
+#[flutter_rust_bridge::frb(sync)]
+pub fn recent_scan_roots() -> Vec<String> {
+    crate::config::load()
+        .recent_roots
+        .into_iter()
+        .filter(|p| std::path::Path::new(p).is_dir())
+        .collect()
 }
 
 #[flutter_rust_bridge::frb(init)]

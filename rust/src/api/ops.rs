@@ -73,3 +73,12 @@ pub fn reveal_in_file_manager(node_id: i64) -> Result<(), String> {
     let path = paths.first().ok_or("Item not found in current scan")?;
     ops::reveal(path)
 }
+
+/// Open the item with the OS default handler (file → default app,
+/// directory → file manager).
+#[flutter_rust_bridge::frb(sync)]
+pub fn open_item(node_id: i64) -> Result<(), String> {
+    let paths = resolve_paths(&[node_id]);
+    let path = paths.first().ok_or("Item not found in current scan")?;
+    ops::open(path)
+}
