@@ -9,6 +9,7 @@ import '../../ui/widgets.dart';
 import '../../util/format.dart';
 import '../../util/platform.dart';
 import '../insights/delete_flow.dart';
+import '../scan/scan_providers.dart';
 import 'tree_providers.dart';
 
 /// Details for the selected tile; falls back to the focused directory.
@@ -75,6 +76,14 @@ class SidePanel extends ConsumerWidget {
             formatBytes(node.size),
             style: mono(28, weight: FontWeight.w700, color: scheme.onSurface),
           ),
+          if (_showApparent(node)) ...[
+            const SizedBox(height: 2),
+            Text(
+              'on disk · ${formatBytes(node.logicalSize)} apparent',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
           if (percent != null) ...[
             const SizedBox(height: 8),
             ClipRRect(
@@ -99,6 +108,10 @@ class SidePanel extends ConsumerWidget {
           ],
           if (node.kind == FsKind.smallFiles)
             _MetaRow(label: 'Items', value: formatCount(node.itemCount)),
+          if (node.kind == FsKind.dir && node.childCount > 0) ...[
+            const SizedBox(height: 14),
+            _LargestItems(parent: node),
+          ],
           if (node.path.isNotEmpty) ...[
             const SizedBox(height: 14),
             GlassPanel(
@@ -169,6 +182,18 @@ class SidePanel extends ConsumerWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: const Text('Open'),
+                    onPressed: () {
+                      try {
+                        openItem(nodeId: node.id);
+                      } catch (_) {}
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
                     icon: const Icon(Icons.visibility_rounded, size: 18),
                     label: const Text('Reveal'),
                     onPressed: () {
@@ -178,21 +203,94 @@ class SidePanel extends ConsumerWidget {
                     },
                   ),
                 ),
-                if (!isProtected) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: Text(trashName),
-                      onPressed: () => confirmAndTrash(context, ref, [node]),
-                    ),
-                  ),
-                ],
               ],
             ),
+            if (!isProtected) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: Text('Move to $trashName'),
+                  onPressed: () => confirmAndTrash(context, ref, [node]),
+                ),
+              ),
+            ],
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Show the apparent (logical) size only when it differs from the on-disk size
+/// by more than block-rounding noise — otherwise it's just clutter.
+bool _showApparent(FsNode node) {
+  final diff = (node.size - node.logicalSize).abs();
+  if (node.logicalSize <= 0 || diff <= 65536) return false;
+  return node.size == 0 || diff / node.size > 0.02;
+}
+
+/// The biggest few children of a directory, tappable to jump to them.
+class _LargestItems extends ConsumerWidget {
+  const _LargestItems({required this.parent});
+
+  final FsNode parent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    // Recompute when the scan changes; getChildren is a cheap sync call.
+    ref.watch(scanControllerProvider);
+    final children = getChildren(id: parent.id, limit: 6)
+        .where((c) => c.id >= 0 && c.kind != FsKind.smallFiles)
+        .take(5)
+        .toList();
+    if (children.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Largest items',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: scheme.onSurfaceVariant)),
+        const SizedBox(height: 6),
+        for (final c in children)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => revealNodeId(ref, c.id),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      c.kind == FsKind.dir
+                          ? Icons.folder_rounded
+                          : Icons.insert_drive_file_rounded,
+                      size: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        c.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(formatBytes(c.size),
+                        style: mono(11, color: scheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

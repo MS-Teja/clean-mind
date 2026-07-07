@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,11 +18,35 @@ import '../results/tree_providers.dart';
 import 'scan_providers.dart';
 
 /// Root of the app: landing → scanning → results, driven by [ScanState].
-class ScanScreen extends ConsumerWidget {
+/// A folder dropped anywhere on the window starts a scan of it.
+class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends ConsumerState<ScanScreen> {
+  bool _dragging = false;
+
+  void _onDrop(DropDoneDetails details) {
+    if (details.files.isEmpty) return;
+    final path = details.files.first.path;
+    final String dir;
+    try {
+      // A dropped file scans its containing folder; a folder scans itself.
+      dir = FileSystemEntity.isDirectorySync(path)
+          ? path
+          : File(path).parent.path;
+    } catch (_) {
+      return;
+    }
+    ref.read(scanRootProvider.notifier).set(dir);
+    ref.read(scanControllerProvider.notifier).start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Flush the derived-provider chain as soon as a scan lands, while still
     // outside the widget build phase. After a rescan these providers are
     // stale; if the results screen flushes them lazily during its first
@@ -36,16 +62,67 @@ class ScanScreen extends ConsumerWidget {
       }
     });
     final scan = ref.watch(scanControllerProvider);
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: switch (scan) {
-        ScanIdle() => const _LandingView(key: ValueKey('landing')),
-        ScanRunning(:final progress) =>
-          _ScanningView(key: const ValueKey('scanning'), progress: progress),
-        ScanDone() => const ResultsScreen(key: ValueKey('results')),
-        ScanFailed(:final message) =>
-          _FailedView(key: const ValueKey('failed'), message: message),
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: (details) {
+        setState(() => _dragging = false);
+        _onDrop(details);
       },
+      child: Stack(
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: switch (scan) {
+              ScanIdle() => const _LandingView(key: ValueKey('landing')),
+              ScanRunning(:final progress) => _ScanningView(
+                  key: const ValueKey('scanning'), progress: progress),
+              ScanDone() => const ResultsScreen(key: ValueKey('results')),
+              ScanFailed(:final message) =>
+                _FailedView(key: const ValueKey('failed'), message: message),
+            },
+          ),
+          if (_dragging) const _DropOverlay(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-window hint shown while a folder is dragged over the app.
+class _DropOverlay extends StatelessWidget {
+  const _DropOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: scheme.scrim.withValues(alpha: 0.45),
+          child: Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.6), width: 2),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.download_rounded, size: 34, color: scheme.primary),
+                  const SizedBox(height: 10),
+                  Text('Drop a folder to scan it',
+                      style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -83,22 +160,7 @@ class _LandingView extends ConsumerWidget {
                       ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 36),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _PresetChip(
-                      icon: Icons.home_rounded,
-                      label: 'Home folder',
-                      path: homeDirPath(),
-                    ),
-                    const SizedBox(width: 8),
-                    _PresetChip(
-                      icon: Icons.storage_rounded,
-                      label: 'Entire disk',
-                      path: diskRootPath,
-                    ),
-                  ],
-                ),
+                const _LocationChips(),
                 if (fullDiskAccessStatus() == FdaStatus.denied) ...[
                   const SizedBox(height: 12),
                   const _FullDiskAccessBanner(),
@@ -136,6 +198,7 @@ class _LandingView extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const _RecentScans(),
                 const SizedBox(height: 24),
                 DecoratedBox(
                   decoration: BoxDecoration(
@@ -216,6 +279,115 @@ class _FullDiskAccessBanner extends StatelessWidget {
             onPressed: openFullDiskAccessSettings,
             child: const Text('Open Settings'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Smart locations (Home, Desktop, Documents, Downloads, Applications, mounted
+/// volumes) plus "Entire disk", built from the platform's real directories.
+class _LocationChips extends ConsumerWidget {
+  const _LocationChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locations =
+        standardLocations().where((l) => l.exists).toList(growable: false);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 460),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final loc in locations)
+            _PresetChip(
+              icon: _iconForKind(loc.kind),
+              label: loc.label,
+              path: loc.path,
+            ),
+          _PresetChip(
+            icon: Icons.storage_rounded,
+            label: 'Entire disk',
+            path: diskRootPath,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _iconForKind(String kind) {
+  switch (kind) {
+    case 'home':
+      return Icons.home_rounded;
+    case 'desktop':
+      return Icons.desktop_mac_rounded;
+    case 'documents':
+      return Icons.description_rounded;
+    case 'downloads':
+      return Icons.download_rounded;
+    case 'applications':
+      return Icons.apps_rounded;
+    case 'volume':
+      return Icons.storage_rounded;
+    default:
+      return Icons.folder_rounded;
+  }
+}
+
+/// Recently-scanned roots (paths only). Clicking one sets it as the scan root.
+class _RecentScans extends ConsumerWidget {
+  const _RecentScans();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Exclude the current root so the list only shows *other* recent picks.
+    final current = ref.watch(scanRootProvider);
+    final recents = recentScanRoots()
+        .where((p) => p != current)
+        .take(4)
+        .toList(growable: false);
+    if (recents.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Recent',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 6),
+          for (final path in recents)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => ref.read(scanRootProvider.notifier).set(path),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.history_rounded,
+                        size: 13, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: Text(
+                        path,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(11.5, color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
