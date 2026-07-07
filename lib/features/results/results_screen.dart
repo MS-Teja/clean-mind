@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,8 +47,14 @@ class ResultsScreen extends ConsumerWidget {
             children: [
               Container(
                 height: 60,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                // Inset the left edge on macOS so the nav buttons clear the
+                // window traffic lights under the transparent title bar.
+                padding: EdgeInsets.only(
+                  left: Platform.isMacOS ? 82 : 20,
+                  right: 20,
+                  top: 12,
+                  bottom: 12,
+                ),
                 child: Row(
                   children: [
                     const _NavButtons(),

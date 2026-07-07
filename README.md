@@ -20,6 +20,8 @@ brew install --cask MS-Teja/clean-mind/clean-mind
 
 Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk usage analyzer in the spirit of OmniDiskSweeper and DaisyDisk, built for developers. Beyond showing *what* takes space, it identifies developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and classifies everything by **regenerability**, optionally with help from an LLM you control.
 
+The agentic/vibe-coding era makes this worse than ever: spin up a handful of throwaway repos a day with a coding agent and you accumulate `node_modules`, build caches, and `.venv`s faster than you can track them — almost all of it regenerable. Clean Mind is built to find exactly that and tell you what's safe to reclaim.
+
 > The full loop works end to end — scan → interactive treemap → tiered
 > insights → move-to-Trash, with an optional bring-your-own-LLM analysis pass.
 > macOS is the primary platform; Linux and Windows builds are experimental.
@@ -34,7 +36,8 @@ Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk us
 - ✅ **Safe by construction** — a three-tier model, a hard denylist nothing can override, and Trash-first deletion. Permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
 - 🤖 **AI on your terms** — bring your own Anthropic or OpenAI-compatible key, or run a fully local model via Ollama. The AI only ever sees directory *metadata*, never file contents, and can never promote something to "safe" on its own.
 - 🔒 **Private and offline by default** — no telemetry, no account, no bundled inference. Fresh scan each launch; nothing cached, nothing runs in the background.
-- ⚡ **Native and fast** — a parallel Rust core (hardlink-aware, APFS-clone-aware) under a Flutter UI.
+- ⚡ **Native and fast** — a parallel Rust core (hardlink-aware, APFS-clone-aware, safe on very deep trees) under a Flutter UI.
+- 🧭 **Made to explore** — drag a folder in to scan it, search the whole scan by name, switch between the treemap and a sortable list, and move back/forward through folders you've visited.
 
 ## Screenshots
 
@@ -48,8 +51,8 @@ The insights panel groups reclaimable items and, for each one, explains *why* it
 
 ## How it works
 
-- **Scan** — a fast parallel Rust scanner walks your home directory (or any path you choose) and builds a size map. Fresh scan every launch; nothing is cached, nothing runs in the background.
-- **Understand** — an interactive treemap shows where the space went.
+- **Scan** — a fast parallel Rust scanner walks your home directory (or any path you choose — pick a smart location, or just drag a folder onto the window) and builds a size map. Fresh scan every launch; nothing is cached, nothing runs in the background.
+- **Understand** — an interactive treemap shows where the space went, with a sortable list view as an alternative; search the whole scan by name, and move back/forward through folders as you drill in.
 - **Classify** — a deterministic rules engine recognizes known developer artifacts (`node_modules`, cargo `target/`, Xcode DerivedData, Docker images, package-manager caches, …) and marks them by how safely they regenerate.
 - **Ask** — optionally, an aggregated view of your largest directories (metadata only, never file contents) is sent to an LLM *you* configure — your own Anthropic/OpenAI-compatible API key, or a fully local model via Ollama — which explains what can go and why.
 - **Clean** — deletions go to the OS Trash (Recycle Bin on Windows) by default and are recoverable. Permanent deletion exists only behind an explicit confirmation.

@@ -254,6 +254,7 @@ Future<void> _showTileMenu(
     return;
   }
   final isProtected = node.tier == FsTier.protected;
+  final scheme = Theme.of(context).colorScheme;
   final overlay =
       Overlay.of(context).context.findRenderObject() as RenderBox;
   final choice = await showMenu<String>(
@@ -263,12 +264,14 @@ Future<void> _showTileMenu(
       Offset.zero & overlay.size,
     ),
     items: [
-      _menuItem('open', Icons.open_in_new_rounded, 'Open'),
-      _menuItem('reveal', Icons.visibility_rounded, 'Reveal'),
-      _menuItem('copy', Icons.copy_rounded, 'Copy Path'),
-      if (!isProtected) const PopupMenuDivider(),
+      _menuItem('open', Icons.open_in_new_rounded, 'Open', scheme.onSurface),
+      _menuItem(
+          'reveal', Icons.visibility_rounded, 'Reveal', scheme.onSurface),
+      _menuItem('copy', Icons.copy_rounded, 'Copy Path', scheme.onSurface),
+      if (!isProtected) const PopupMenuDivider(height: 9),
       if (!isProtected)
-        _menuItem('trash', Icons.delete_outline_rounded, 'Move to $trashName'),
+        _menuItem('trash', Icons.delete_outline_rounded,
+            'Move to $trashName', scheme.error),
     ],
   );
   if (choice == null || !context.mounted) return;
@@ -293,15 +296,16 @@ Future<void> _showTileMenu(
   }
 }
 
-PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
+PopupMenuItem<String> _menuItem(
+    String value, IconData icon, String label, Color color) {
   return PopupMenuItem<String>(
     value: value,
-    height: 40,
+    height: 38,
     child: Row(
       children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 10),
-        Text(label),
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 11),
+        Text(label, style: TextStyle(color: color)),
       ],
     ),
   );
