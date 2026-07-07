@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../src/rust/api/ops.dart';
 import '../../../src/rust/api/scan.dart';
 import '../../../theme.dart';
 import '../../../util/format.dart';
+import '../../../util/platform.dart';
+import '../../insights/delete_flow.dart';
 import '../../insights/insights_providers.dart';
 import '../tree_providers.dart';
 import 'squarify.dart';
@@ -197,6 +201,10 @@ class _TileState extends ConsumerState<_Tile> {
           onDoubleTap: canDrill
               ? () => ref.read(focusTrailProvider.notifier).drillInto(node)
               : null,
+          onSecondaryTapDown: (details) {
+            ref.read(selectedNodeProvider.notifier).select(node);
+            _showTileMenu(context, ref, details.globalPosition, node);
+          },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 130),
             curve: Curves.easeOut,
@@ -234,6 +242,69 @@ class _TileState extends ConsumerState<_Tile> {
       ),
     );
   }
+}
+
+/// Right-click actions for a tile: Open, Reveal, Copy Path, Move to Trash.
+/// No-op for aggregates (small-files / "N more") which have no single path.
+Future<void> _showTileMenu(
+    BuildContext context, WidgetRef ref, Offset globalPos, FsNode node) async {
+  if (node.id < 0 ||
+      node.kind == FsKind.smallFiles ||
+      node.kind == FsKind.rest) {
+    return;
+  }
+  final isProtected = node.tier == FsTier.protected;
+  final overlay =
+      Overlay.of(context).context.findRenderObject() as RenderBox;
+  final choice = await showMenu<String>(
+    context: context,
+    position: RelativeRect.fromRect(
+      globalPos & const Size(40, 40),
+      Offset.zero & overlay.size,
+    ),
+    items: [
+      _menuItem('open', Icons.open_in_new_rounded, 'Open'),
+      _menuItem('reveal', Icons.visibility_rounded, 'Reveal'),
+      _menuItem('copy', Icons.copy_rounded, 'Copy Path'),
+      if (!isProtected) const PopupMenuDivider(),
+      if (!isProtected)
+        _menuItem('trash', Icons.delete_outline_rounded, 'Move to $trashName'),
+    ],
+  );
+  if (choice == null || !context.mounted) return;
+  switch (choice) {
+    case 'open':
+      try {
+        openItem(nodeId: node.id);
+      } catch (_) {}
+    case 'reveal':
+      try {
+        revealInFileManager(nodeId: node.id);
+      } catch (_) {}
+    case 'copy':
+      await Clipboard.setData(ClipboardData(text: node.path));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Path copied')),
+        );
+      }
+    case 'trash':
+      await confirmAndTrash(context, ref, [node]);
+  }
+}
+
+PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
+  return PopupMenuItem<String>(
+    value: value,
+    height: 40,
+    child: Row(
+      children: [
+        Icon(icon, size: 16),
+        const SizedBox(width: 10),
+        Text(label),
+      ],
+    ),
+  );
 }
 
 class _TileContent extends ConsumerWidget {
