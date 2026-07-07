@@ -1,4 +1,106 @@
+use std::path::PathBuf;
 use std::process::Command;
+
+/// A pickable scan location for the landing screen.
+pub struct Location {
+    pub label: String,
+    pub path: String,
+    /// One of: home, desktop, documents, downloads, applications, volume.
+    pub kind: String,
+    pub exists: bool,
+}
+
+fn push_dir(out: &mut Vec<Location>, label: &str, kind: &str, path: Option<PathBuf>) {
+    if let Some(p) = path {
+        out.push(Location {
+            label: label.to_string(),
+            exists: p.is_dir(),
+            path: p.to_string_lossy().into_owned(),
+            kind: kind.to_string(),
+        });
+    }
+}
+
+/// Standard scan locations plus mounted volumes, for the landing screen. Each
+/// carries an `exists` flag so the UI can grey out ones that don't apply.
+#[flutter_rust_bridge::frb(sync)]
+pub fn standard_locations() -> Vec<Location> {
+    let mut out = Vec::new();
+    push_dir(&mut out, "Home", "home", dirs::home_dir());
+    push_dir(&mut out, "Desktop", "desktop", dirs::desktop_dir());
+    push_dir(&mut out, "Documents", "documents", dirs::document_dir());
+    push_dir(&mut out, "Downloads", "downloads", dirs::download_dir());
+    #[cfg(target_os = "macos")]
+    push_dir(
+        &mut out,
+        "Applications",
+        "applications",
+        Some(PathBuf::from("/Applications")),
+    );
+    out.extend(mounted_volumes());
+    out
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn read_volume_dir(dir: &std::path::Path) -> Vec<Location> {
+    let mut out = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                out.push(Location {
+                    label: e.file_name().to_string_lossy().into_owned(),
+                    path: p.to_string_lossy().into_owned(),
+                    kind: "volume".to_string(),
+                    exists: true,
+                });
+            }
+        }
+    }
+    out
+}
+
+#[cfg(target_os = "macos")]
+fn mounted_volumes() -> Vec<Location> {
+    read_volume_dir(std::path::Path::new("/Volumes"))
+}
+
+#[cfg(target_os = "linux")]
+fn mounted_volumes() -> Vec<Location> {
+    let user = std::env::var("USER").unwrap_or_default();
+    let mut out = Vec::new();
+    for base in [
+        format!("/run/media/{user}"),
+        format!("/media/{user}"),
+        "/media".to_string(),
+        "/mnt".to_string(),
+    ] {
+        out.extend(read_volume_dir(std::path::Path::new(&base)));
+    }
+    out
+}
+
+#[cfg(target_os = "windows")]
+fn mounted_volumes() -> Vec<Location> {
+    let mut out = Vec::new();
+    for c in b'A'..=b'Z' {
+        let drive = format!("{}:\\", c as char);
+        if std::path::Path::new(&drive).is_dir() {
+            out.push(Location {
+                label: format!("{}:", c as char),
+                path: drive,
+                kind: "volume".to_string(),
+                exists: true,
+            });
+        }
+    }
+    out
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+fn mounted_volumes() -> Vec<Location> {
+    Vec::new()
+}
 
 /// Whether the app can read macOS TCC-protected locations (Mail, Safari,
 /// Messages, …). Without Full Disk Access those directories fail with

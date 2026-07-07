@@ -1,5 +1,5 @@
 use crate::analysis;
-use crate::config::{self, Settings};
+use crate::config;
 use crate::llm;
 use crate::scanner::{Tier, STORE};
 
@@ -33,13 +33,13 @@ pub fn get_llm_settings() -> LlmSettings {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_llm_settings(settings: LlmSettings) -> Result<(), String> {
-    config::save(&Settings {
-        provider: settings.provider,
-        base_url: settings.base_url,
-        model: settings.model,
-        redact: settings.redact,
-        scan_root: config::load().scan_root,
-    })
+    // Load-and-mutate so scan_root and recent_roots survive an LLM settings save.
+    let mut current = config::load();
+    current.provider = settings.provider;
+    current.base_url = settings.base_url;
+    current.model = settings.model;
+    current.redact = settings.redact;
+    config::save(&current)
 }
 
 #[flutter_rust_bridge::frb(sync)]

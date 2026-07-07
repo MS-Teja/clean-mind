@@ -6,8 +6,13 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `fetch_latest_release`, `is_newer`
+// These functions are ignored because they are not marked as `pub`: `fetch_latest_release`, `is_newer`, `mounted_volumes`, `push_dir`, `read_volume_dir`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`
+
+/// Standard scan locations plus mounted volumes, for the landing screen. Each
+/// carries an `exists` flag so the UI can grey out ones that don't apply.
+List<Location> standardLocations() =>
+    RustLib.instance.api.crateApiSystemStandardLocations();
 
 /// Probe a few TCC-protected directories instead of asking the OS: there is
 /// no public API to query Full Disk Access, but a successful `read_dir` on
@@ -44,6 +49,37 @@ enum FdaStatus {
 
   /// No probe location exists (or no home dir) — nothing to conclude.
   notDetermined,
+}
+
+/// A pickable scan location for the landing screen.
+class Location {
+  final String label;
+  final String path;
+
+  /// One of: home, desktop, documents, downloads, applications, volume.
+  final String kind;
+  final bool exists;
+
+  const Location({
+    required this.label,
+    required this.path,
+    required this.kind,
+    required this.exists,
+  });
+
+  @override
+  int get hashCode =>
+      label.hashCode ^ path.hashCode ^ kind.hashCode ^ exists.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Location &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          path == other.path &&
+          kind == other.kind &&
+          exists == other.exists;
 }
 
 class UpdateCheck {

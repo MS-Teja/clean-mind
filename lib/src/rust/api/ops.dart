@@ -26,6 +26,11 @@ Future<List<OpOutcome>> deletePermanently({
 void revealInFileManager({required PlatformInt64 nodeId}) =>
     RustLib.instance.api.crateApiOpsRevealInFileManager(nodeId: nodeId);
 
+/// Open the item with the OS default handler (file → default app,
+/// directory → file manager).
+void openItem({required PlatformInt64 nodeId}) =>
+    RustLib.instance.api.crateApiOpsOpenItem(nodeId: nodeId);
+
 class OpOutcome {
   final String path;
   final bool ok;
