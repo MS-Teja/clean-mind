@@ -9,7 +9,6 @@
   <link rel="icon" type="image/png" href="logo.png" />
   <link rel="apple-touch-icon" href="logo.png" />
 
-  <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Clean Mind — see what fills your disk, and what's safe to reclaim" />
   <meta property="og:description" content="An open-source disk analyzer built for developers. It recognizes node_modules, build artifacts and package caches, tells you why each is safe, and moves them to the Trash — never automatically." />
@@ -17,8 +16,10 @@
   <meta name="twitter:card" content="summary_large_image" />
 
   <link rel="stylesheet" href="styles.css" />
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
+  <div class="grain" aria-hidden="true"></div>
 
   <!-- ===================== NAV ===================== -->
   <header class="nav" id="nav">
@@ -31,7 +32,7 @@
         <a href="#features">Features</a>
         <a href="#how">How it works</a>
         <a href="#trust">Trust model</a>
-        <a href="#install">Install</a>
+        <a href="#download">Download</a>
       </nav>
       <a class="nav-cta" href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2c-3.34.72-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.77-1.34-1.77-1.1-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.84 2.8 1.3 3.49.99.11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.32.47-2.39 1.24-3.23-.13-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"/></svg>
@@ -44,55 +45,63 @@
 
   <!-- ===================== HERO ===================== -->
   <section class="hero">
+    <div class="hero-rings" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Open source · macOS · Linux · Windows</p>
-        <h1>See what fills your disk — and what's <span class="accent">safe to reclaim</span>.</h1>
-        <p class="lede">A disk analyzer that recognizes developer bloat — <code style="font-family:var(--mono);font-size:.9em">node_modules</code>, build artifacts, package caches — and tells you exactly why each one can go.</p>
+        <p class="eyebrow reveal-line">Open source · macOS · Linux · Windows</p>
+        <h1><span class="h1-inner">See what fills your disk — and what's <em>safe to reclaim</em>.</span></h1>
+        <p class="lede reveal-line">A disk analyzer that recognizes developer bloat — <code>node_modules</code>, build artifacts, package caches — and tells you exactly why each one can go.</p>
 
-        <div class="hero-cta">
+        <div class="hero-cta reveal-line">
           <div class="install-cmd" role="group" aria-label="Homebrew install command">
             <span class="prompt" aria-hidden="true">$</span>
-            <code id="brew-cmd">brew install --cask MS-Teja/clean-mind/clean-mind</code>
+            <code>brew install --cask MS-Teja/clean-mind/clean-mind</code>
             <button type="button" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind" aria-label="Copy install command">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               <span class="label">Copy</span>
             </button>
           </div>
         </div>
-        <div class="hero-cta" style="margin-top:16px">
-          <a class="btn btn-primary" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
+        <div class="hero-cta reveal-line" style="margin-top:16px">
+          <a class="btn btn-primary" href="#download">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-            Download for macOS
+            Download free
           </a>
           <a class="btn btn-ghost" href="#how">See how it works</a>
         </div>
 
-        <div class="hero-meta">
+        <div class="hero-meta reveal-line">
           <span><i class="dot"></i> Apache-2.0</span>
           <span><i class="dot"></i> No telemetry, no account</span>
           <span><i class="dot"></i> Trash-first, never automatic</span>
         </div>
       </div>
 
-      <!-- Live treemap thesis -->
+      <!-- 3D disk skyline (falls back to the flat treemap) -->
       <div class="hero-visual">
-        <div class="map-card" aria-hidden="true">
-          <div class="titlebar">
-            <div class="tl-dots"><i></i><i></i><i></i></div>
-            <span class="tl-title">Clean Mind — ~/Projects</span>
-            <span class="tl-reclaim" id="reclaim-pill">519 MB reclaimable</span>
+        <div class="skyline-stage">
+          <div class="sky-glow" aria-hidden="true"></div>
+          <canvas id="skyline" aria-label="An interactive 3D map of a disk: each folder is a block sized by the space it uses, with reclaimable folders glowing mint green."></canvas>
+
+          <div id="skyline-fallback" hidden>
+            <div class="map-card">
+              <div class="titlebar">
+                <div class="tl-dots"><i></i><i></i><i></i></div>
+                <span class="tl-title">Clean Mind — ~/Projects</span>
+                <span class="tl-reclaim">519 MB reclaimable</span>
+              </div>
+              <div class="map-canvas-wrap"><canvas id="treemap"></canvas></div>
+            </div>
           </div>
-          <div class="map-canvas-wrap">
-            <canvas id="treemap"></canvas>
-          </div>
-          <div class="map-legend">
-            <span><i style="background:#3d5148"></i> Folder</span>
-            <span><i style="background:#32424e"></i> File</span>
+
+          <div class="sky-legend">
+            <span><i style="background:#33463d"></i> Folder</span>
+            <span><i style="background:#2b3a44"></i> File</span>
             <span><i style="background:var(--safe)"></i> Safe to reclaim</span>
             <span><i style="background:var(--protected)"></i> Protected</span>
           </div>
         </div>
+        <p class="sky-hint" aria-hidden="true">Hover any block to inspect it — no drag needed</p>
       </div>
     </div>
   </section>
@@ -294,69 +303,84 @@
     </div>
   </section>
 
-  <!-- ===================== INSTALL ===================== -->
-  <section id="install">
+  <!-- ===================== DOWNLOAD ===================== -->
+  <section id="download" class="band">
     <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">Install</p>
-        <h2>Grab the build for your platform.</h2>
+      <div class="section-head center reveal">
+        <p class="eyebrow">Download</p>
+        <h2>Get Clean Mind <span data-ver class="ver-pill">free</span></h2>
         <p>macOS is the primary, best-tested platform. Linux and Windows build and pass CI, but have had less real-world use — bug reports are especially welcome.</p>
       </div>
 
-      <div class="install-tabs reveal" role="tablist" aria-label="Install platform">
-        <button role="tab" id="tab-mac" aria-controls="panel-mac" aria-selected="true">macOS</button>
-        <button role="tab" id="tab-linux" aria-controls="panel-linux" aria-selected="false">Linux</button>
-        <button role="tab" id="tab-win" aria-controls="panel-win" aria-selected="false">Windows</button>
-      </div>
-
-      <div class="install-panels reveal">
-        <div class="panel" id="panel-mac" role="tabpanel" aria-labelledby="tab-mac" data-active="true">
-          <div class="panel-card">
-            <h3>Homebrew <span style="color:var(--ink-3);font-weight:400;font-size:14px">— recommended</span></h3>
-            <p>Installs and opens like any other app, with no Gatekeeper hoops.</p>
+      <div class="dl-grid">
+        <!-- macOS: Homebrew first -->
+        <article class="dl-card reveal" data-os="mac">
+          <div class="dl-top">
+            <div class="dl-os">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2 1.6-3 1.7-3-.9-1.4-2.4-1.5-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.2 2-1.4 2.4-.4 6 1 8 .7 1 1.4 2 2.4 2 1 0 1.3-.6 2.5-.6s1.5.6 2.5.6c1 0 1.7-.9 2.4-1.9.7-1.1 1-2.1 1-2.2-.1 0-1.9-.7-1.9-2.8zM14.5 5.9c.5-.6.9-1.5.8-2.4-.8 0-1.7.5-2.2 1.2-.5.5-.9 1.5-.8 2.3.9.1 1.8-.4 2.2-1.1z"/></svg>
+              <div><h3>macOS</h3><span class="dl-sub">Apple silicon &amp; Intel · macOS 12+</span></div>
+            </div>
+          </div>
+          <div class="dl-body">
+            <p class="dl-lead">Recommended — Homebrew installs and opens like any other app, with no Gatekeeper prompts.</p>
             <div class="code-block">
               <span class="prompt">$</span>
               <code>brew install --cask MS-Teja/clean-mind/clean-mind</code>
               <button type="button" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind">Copy</button>
             </div>
-            <p style="margin-top:22px"><span class="tag">DMG alternative</span> — The app isn't notarized (it's free, with no paid Apple Developer account), so a direct DMG install needs one extra step on first launch:</p>
-            <ol>
-              <li><b>macOS 15+:</b> open the app once (it'll be blocked), then <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</li>
-              <li><b>macOS 14 and earlier:</b> right-click the app → <b>Open</b> → <b>Open</b>.</li>
-              <li>Or from a terminal: <code>xattr -d com.apple.quarantine "/Applications/Clean Mind.app"</code></li>
-            </ol>
+            <a class="dl-secondary" data-dl="mac" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span>Or download the <b>.dmg</b></span>
+              <span class="dl-size" data-size="mac"></span>
+            </a>
+            <p class="dl-note">Unsigned (no paid Apple account): with the DMG, first launch needs <b>right-click → Open</b>, or <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</p>
           </div>
-        </div>
+        </article>
 
-        <div class="panel" id="panel-linux" role="tabpanel" aria-labelledby="tab-linux" data-active="false">
-          <div class="panel-card">
-            <h3>Linux <span style="color:var(--review);font-weight:400;font-size:13px">— experimental</span></h3>
-            <p>Extract the tarball from the latest release, then either run the binary directly or install it for your user (launcher entry + icon, no root needed). Requires GTK 3.</p>
-            <div class="code-block">
-              <span class="prompt">$</span>
-              <code>./clean-mind/install.sh</code>
-              <button type="button" data-copy="./clean-mind/install.sh">Copy</button>
+        <!-- Windows -->
+        <article class="dl-card reveal" data-os="windows">
+          <div class="dl-top">
+            <div class="dl-os">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v6.7H3V5.5zm0 13 7.2 1v-6.6H3v5.6zM11 4.3 21 3v8.2H11V4.3zm0 15.4L21 21v-8.1H11v6.8z"/></svg>
+              <div><h3>Windows</h3><span class="dl-sub">Windows 10 &amp; 11 · x64</span></div>
             </div>
-            <p style="margin-top:16px">Or run it in place with <code>./clean-mind/clean_mind</code>.</p>
+            <span class="dl-flag">Experimental</span>
           </div>
-        </div>
+          <div class="dl-body">
+            <p class="dl-lead">A portable build — extract the zip and run <code>clean_mind.exe</code>. Deletions go to the Recycle Bin.</p>
+            <a class="btn btn-primary dl-primary" data-dl="windows" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span>Download for Windows</span>
+            </a>
+            <div class="dl-meta"><span class="dl-file" data-file="windows">.zip · x64</span><span class="dl-size" data-size="windows"></span></div>
+            <p class="dl-note">If SmartScreen warns, choose <b>More info → Run anyway</b>.</p>
+          </div>
+        </article>
 
-        <div class="panel" id="panel-win" role="tabpanel" aria-labelledby="tab-win" data-active="false">
-          <div class="panel-card">
-            <h3>Windows <span style="color:var(--review);font-weight:400;font-size:13px">— experimental</span></h3>
-            <p>Extract the zip from the latest release and run <code>clean_mind.exe</code>. If SmartScreen warns, choose <b>More info → Run anyway</b>. Deletions go to the Recycle Bin.</p>
-            <div class="code-block">
-              <span class="prompt">&gt;</span>
-              <code>clean_mind.exe</code>
-              <button type="button" data-copy="clean_mind.exe">Copy</button>
+        <!-- Linux -->
+        <article class="dl-card reveal" data-os="linux">
+          <div class="dl-top">
+            <div class="dl-os">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c-1.7 0-3 1.6-3 3.4 0 1 .1 1.7.1 2.4 0 .7-.7 1.4-1.4 2.5C6.8 11.9 6 13.2 6 14.7c0 .4-.5.7-.9 1.2-.4.5-.7 1.1-.3 1.9.2.4 0 .8 0 1.2 0 .6.5 1 1.2 1.1.7.1 1.6.1 2.4.5.9.4 1.7.6 2.3.6.6 0 1.4-.2 2.3-.6.8-.4 1.7-.4 2.4-.5.7-.1 1.2-.5 1.2-1.1 0-.4-.2-.8 0-1.2.4-.8.1-1.4-.3-1.9-.4-.5-.9-.8-.9-1.2 0-1.5-.8-2.8-1.7-4.4-.7-1.1-1.4-1.8-1.4-2.5 0-.7.1-1.4.1-2.4C15 3.6 13.7 2 12 2zm-1.5 3.2c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zm3 0c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zM12 8.3c.8 0 1.9.5 1.9.9 0 .2-.6.5-1.1.7-.3.2-.6.4-.8.4-.2 0-.6-.2-.9-.4-.5-.2-1.1-.5-1.1-.7 0-.4 1.2-.9 2-.9z"/></svg>
+              <div><h3>Linux</h3><span class="dl-sub">x64 · requires GTK 3</span></div>
             </div>
+            <span class="dl-flag">Experimental</span>
           </div>
-        </div>
+          <div class="dl-body">
+            <p class="dl-lead">Extract the tarball, then run <code>./clean-mind/install.sh</code> (user-level, no root) or the binary directly.</p>
+            <a class="btn btn-primary dl-primary" data-dl="linux" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span>Download for Linux</span>
+            </a>
+            <div class="dl-meta"><span class="dl-file" data-file="linux">.tar.gz · x64</span><span class="dl-size" data-size="linux"></span></div>
+            <p class="dl-note">Run in place with <code>./clean-mind/clean_mind</code>.</p>
+          </div>
+        </article>
       </div>
 
-      <p style="margin-top:24px;color:var(--ink-3);font-size:14px">
-        All downloads live on the
-        <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener" style="color:var(--mint)">latest release page</a>.
+      <p class="dl-foot">
+        Every build, including checksums, lives on the
+        <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">latest release page</a>.
       </p>
     </div>
   </section>
@@ -369,7 +393,7 @@
         <h2>Reclaim your disk with a clear conscience.</h2>
         <p>Free and open source. See what fills your disk, understand what's safe, and send it to the Trash — never automatically.</p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
+          <a class="btn btn-primary" href="#download">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
             Download Clean Mind
           </a>
@@ -396,7 +420,7 @@
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
             <a href="#trust">Trust model</a>
-            <a href="#install">Install</a>
+            <a href="#download">Download</a>
           </div>
           <div class="foot-col">
             <h5>Project</h5>
@@ -414,6 +438,7 @@
     </div>
   </footer>
 
+  <script type="module" src="scene.js"></script>
   <script src="site.js"></script>
 </body>
 </html>
