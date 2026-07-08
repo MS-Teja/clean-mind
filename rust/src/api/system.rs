@@ -208,6 +208,38 @@ pub fn open_url(url: String) {
     let _ = Command::new("xdg-open").arg(&url).spawn();
 }
 
+/// UI preferences that survive restarts (persisted in settings.json by the
+/// Rust core — never scan data, never secrets).
+pub struct UiPrefs {
+    /// "treemap" | "list"
+    pub results_view: String,
+    /// "size" | "name" | "items"
+    pub sort_key: String,
+    pub sort_ascending: bool,
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_ui_prefs() -> UiPrefs {
+    let ui = crate::config::load().ui;
+    UiPrefs {
+        results_view: ui.results_view,
+        sort_key: ui.sort_key,
+        sort_ascending: ui.sort_ascending,
+    }
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn set_ui_prefs(prefs: UiPrefs) {
+    let mut settings = crate::config::load();
+    settings.ui = crate::config::UiConfig {
+        results_view: prefs.results_view,
+        sort_key: prefs.sort_key,
+        sort_ascending: prefs.sort_ascending,
+    };
+    // Best-effort: a failed prefs write should never surface as an error.
+    let _ = crate::config::save(&settings);
+}
+
 pub struct UpdateCheck {
     pub current: String,
     pub latest: String,

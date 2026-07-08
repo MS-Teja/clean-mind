@@ -35,6 +35,9 @@ pub fn get_llm_settings() -> LlmSettings {
 pub fn set_llm_settings(settings: LlmSettings) -> Result<(), String> {
     // Load-and-mutate so scan_root and recent_roots survive an LLM settings save.
     let mut current = config::load();
+    // Remember this provider's base URL/model so switching providers later
+    // restores them instead of resetting to defaults.
+    current.remember_provider(&settings.provider, &settings.base_url, &settings.model);
     current.provider = settings.provider;
     current.base_url = settings.base_url;
     current.model = settings.model;
@@ -42,13 +45,17 @@ pub fn set_llm_settings(settings: LlmSettings) -> Result<(), String> {
     config::save(&current)
 }
 
+/// Settings to show when the user picks `provider`: whatever they last saved
+/// for it, or the built-in defaults if they never configured it.
 #[flutter_rust_bridge::frb(sync)]
-pub fn provider_defaults(provider: String) -> LlmSettings {
+pub fn settings_for_provider(provider: String) -> LlmSettings {
+    let current = config::load();
+    let cfg = current.config_for(&provider);
     LlmSettings {
-        base_url: config::default_base_url(&provider).into(),
-        model: config::default_model(&provider).into(),
+        base_url: cfg.base_url,
+        model: cfg.model,
         provider,
-        redact: config::load().redact,
+        redact: current.redact,
     }
 }
 
@@ -58,9 +65,12 @@ pub fn save_api_key(provider: String, key: String) -> Result<(), String> {
     config::save_api_key(&provider, &key)
 }
 
+/// Whether a key is saved for `provider`. Uses the non-secret settings hint, so
+/// it never reads the keychain (and never triggers an OS password prompt) —
+/// safe to call while rendering the settings screen.
 #[flutter_rust_bridge::frb(sync)]
 pub fn has_api_key(provider: String) -> bool {
-    config::get_api_key(&provider).is_some()
+    config::has_saved_key(&provider)
 }
 
 fn needs_key(provider: &str) -> bool {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
+import '../../src/rust/api/system.dart';
 import '../scan/scan_providers.dart';
 
 const treemapChildLimit = 40;
@@ -88,9 +89,9 @@ class FocusTrailController extends Notifier<List<FsNode>> {
       ref.read(selectedNodeProvider.notifier).select(null);
 }
 
-final focusTrailProvider =
-    NotifierProvider<FocusTrailController, List<FsNode>>(
-        FocusTrailController.new);
+final focusTrailProvider = NotifierProvider<FocusTrailController, List<FsNode>>(
+  FocusTrailController.new,
+);
 
 final focusNodeProvider = Provider<FsNode?>((ref) {
   final trail = ref.watch(focusTrailProvider);
@@ -117,9 +118,9 @@ class SelectedNodeController extends Notifier<FsNode?> {
   void select(FsNode? node) => state = node;
 }
 
-final selectedNodeProvider =
-    NotifierProvider<SelectedNodeController, FsNode?>(
-        SelectedNodeController.new);
+final selectedNodeProvider = NotifierProvider<SelectedNodeController, FsNode?>(
+  SelectedNodeController.new,
+);
 
 /// Navigate the trail to `id` and reflect it in the details panel — focus a
 /// directory, or focus a file's parent and select the file. Shared by search
@@ -132,13 +133,29 @@ void revealNodeId(WidgetRef ref, int id) {
 /// How the current directory is rendered in the results screen.
 enum ResultsView { treemap, list }
 
-final resultsViewProvider = NotifierProvider<ResultsViewController, ResultsView>(
-    ResultsViewController.new);
+final resultsViewProvider =
+    NotifierProvider<ResultsViewController, ResultsView>(
+      ResultsViewController.new,
+    );
 
 class ResultsViewController extends Notifier<ResultsView> {
   @override
-  ResultsView build() => ResultsView.treemap;
-  void set(ResultsView v) => state = v;
+  ResultsView build() => getUiPrefs().resultsView == 'list'
+      ? ResultsView.list
+      : ResultsView.treemap;
+
+  void set(ResultsView v) {
+    state = v;
+    // Remember the choice across restarts.
+    final p = getUiPrefs();
+    setUiPrefs(
+      prefs: UiPrefs(
+        resultsView: v == ResultsView.list ? 'list' : 'treemap',
+        sortKey: p.sortKey,
+        sortAscending: p.sortAscending,
+      ),
+    );
+  }
 }
 
 /// Whole-scan search query (empty = not searching). Cleared on a new scan.
@@ -152,8 +169,9 @@ class SearchQueryController extends Notifier<String> {
   void set(String q) => state = q;
 }
 
-final searchQueryProvider =
-    NotifierProvider<SearchQueryController, String>(SearchQueryController.new);
+final searchQueryProvider = NotifierProvider<SearchQueryController, String>(
+  SearchQueryController.new,
+);
 
 /// Results for the current search query, largest first. Empty when not
 /// searching. Recomputes as the query or scan changes.
@@ -175,5 +193,6 @@ class DeletedIdsController extends Notifier<Set<int>> {
   void markDeleted(Iterable<int> ids) => state = {...state, ...ids};
 }
 
-final deletedIdsProvider =
-    NotifierProvider<DeletedIdsController, Set<int>>(DeletedIdsController.new);
+final deletedIdsProvider = NotifierProvider<DeletedIdsController, Set<int>>(
+  DeletedIdsController.new,
+);
