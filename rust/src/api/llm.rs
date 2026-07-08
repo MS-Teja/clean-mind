@@ -86,6 +86,10 @@ pub async fn test_llm_connection() -> Result<String, String> {
             if needs_key(&settings.provider) && key.is_none() {
                 return Err("No API key stored for this provider.".into());
             }
+            if key.is_some() {
+                // Backfill the "key saved" hint for keys stored before it existed.
+                config::note_key_present(&settings.provider);
+            }
             llm::chat(
                 &settings,
                 key.as_deref(),
@@ -110,6 +114,9 @@ pub async fn run_ai_analysis() -> Result<Vec<AiRecommendation>, String> {
             let key = config::get_api_key(&settings.provider);
             if needs_key(&settings.provider) && key.is_none() {
                 return Err("No API key stored for this provider.".into());
+            }
+            if key.is_some() {
+                config::note_key_present(&settings.provider);
             }
 
             let digest = {

@@ -175,6 +175,17 @@ pub fn has_saved_key(provider: &str) -> bool {
     load().key_providers.iter().any(|p| p == provider)
 }
 
+/// Record that a keychain key exists for `provider`. Heals the hint for keys
+/// saved before the hint existed: the first successful keychain read (during a
+/// test or analysis the user asked for) backfills it.
+pub fn note_key_present(provider: &str) {
+    let mut settings = load();
+    if !settings.key_providers.iter().any(|p| p == provider) {
+        settings.key_providers.push(provider.to_string());
+        let _ = save(&settings);
+    }
+}
+
 /// Read the actual secret from the keychain. This CAN trigger an OS password
 /// prompt, so only call it when making a real API request (test / analysis) —
 /// never just to render the UI.

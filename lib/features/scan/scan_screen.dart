@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
@@ -14,8 +15,8 @@ import '../../util/format.dart';
 import '../../util/platform.dart';
 import '../insights/insights_providers.dart';
 import '../results/results_screen.dart';
-import '../settings/settings_dialog.dart';
 import '../results/tree_providers.dart';
+import '../settings/settings_dialog.dart';
 import 'scan_providers.dart';
 
 /// Root of the app: landing → scanning → results, driven by [ScanState].
@@ -29,6 +30,14 @@ class ScanScreen extends ConsumerStatefulWidget {
 
 class _ScanScreenState extends ConsumerState<ScanScreen> {
   bool _dragging = false;
+  bool _settingsOpen = false;
+
+  /// Cmd+, (Ctrl+, elsewhere) — the platform-standard settings shortcut.
+  void _openSettings() {
+    if (_settingsOpen) return;
+    _settingsOpen = true;
+    showSettingsDialog(context).whenComplete(() => _settingsOpen = false);
+  }
 
   void _onDrop(DropDoneDetails details) {
     if (details.files.isEmpty) return;
@@ -63,32 +72,44 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       }
     });
     final scan = ref.watch(scanControllerProvider);
-    return DropTarget(
-      onDragEntered: (_) => setState(() => _dragging = true),
-      onDragExited: (_) => setState(() => _dragging = false),
-      onDragDone: (details) {
-        setState(() => _dragging = false);
-        _onDrop(details);
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.comma, meta: true):
+            _openSettings,
+        const SingleActivator(LogicalKeyboardKey.comma, control: true):
+            _openSettings,
       },
-      child: Stack(
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: switch (scan) {
-              ScanIdle() => const _LandingView(key: ValueKey('landing')),
-              ScanRunning(:final progress) => _ScanningView(
-                key: const ValueKey('scanning'),
-                progress: progress,
+      child: DropTarget(
+        onDragEntered: (_) => setState(() => _dragging = true),
+        onDragExited: (_) => setState(() => _dragging = false),
+        onDragDone: (details) {
+          setState(() => _dragging = false);
+          _onDrop(details);
+        },
+        child: Focus(
+          // The shortcut needs a focus node in scope even on the landing view.
+          autofocus: true,
+          child: Stack(
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: switch (scan) {
+                  ScanIdle() => const _LandingView(key: ValueKey('landing')),
+                  ScanRunning(:final progress) => _ScanningView(
+                    key: const ValueKey('scanning'),
+                    progress: progress,
+                  ),
+                  ScanDone() => const ResultsScreen(key: ValueKey('results')),
+                  ScanFailed(:final message) => _FailedView(
+                    key: const ValueKey('failed'),
+                    message: message,
+                  ),
+                },
               ),
-              ScanDone() => const ResultsScreen(key: ValueKey('results')),
-              ScanFailed(:final message) => _FailedView(
-                key: const ValueKey('failed'),
-                message: message,
-              ),
-            },
+              if (_dragging) const _DropOverlay(),
+            ],
           ),
-          if (_dragging) const _DropOverlay(),
-        ],
+        ),
       ),
     );
   }
