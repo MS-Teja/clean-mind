@@ -13,13 +13,13 @@ final packageInfoProvider = FutureProvider<PackageInfo>(
   (ref) => PackageInfo.fromPlatform(),
 );
 
-void showSettingsDialog(BuildContext context) {
-  showDialog<void>(
+Future<void> showSettingsDialog(BuildContext context) {
+  return showDialog<void>(
     context: context,
     builder: (context) => Dialog(
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 640),
         child: const SettingsPanel(),
       ),
     ),
@@ -149,6 +149,25 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
             onTap: () => setState(() => _section = _Section.about),
           ),
           const Spacer(),
+          OutlinedButton.icon(
+            onPressed: _checkingUpdate || version.isEmpty
+                ? null
+                : () => _checkForUpdate(version),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontSize: 12),
+            ),
+            icon: _checkingUpdate
+                ? const SizedBox(
+                    width: 13,
+                    height: 13,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.system_update_alt_rounded, size: 14),
+            label: Text(_checkingUpdate ? 'Checking…' : 'Check for updates'),
+          ),
+          const SizedBox(height: 12),
           if (version.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(left: 8),
@@ -176,10 +195,18 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
-            child: SingleChildScrollView(
+            // Keep short pages (About) pinned to the top, not centered.
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.topCenter,
+              children: [...previous, ?current],
+            ),
+            child: Align(
               key: ValueKey(_section),
-              padding: const EdgeInsets.fromLTRB(28, 24, 28, 16),
-              child: page,
+              alignment: Alignment.topCenter,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 16),
+                child: page,
+              ),
             ),
           ),
         ),
@@ -192,8 +219,12 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
                   onPressed: _testing ? null : _testConnection,
                   child: Text(_testing ? 'Testing…' : 'Test connection'),
                 ),
-              ],
-              const Spacer(),
+                const SizedBox(width: 12),
+                // Result lives HERE, next to the button — never below the fold.
+                Expanded(child: _buildTestStatus(context)),
+              ] else
+                const Spacer(),
+              const SizedBox(width: 12),
               FilledButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Done'),
@@ -245,6 +276,8 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
         const SizedBox(height: 10),
         SegmentedButton<String>(
           expandedInsets: EdgeInsets.zero,
+          // No checkmark — it pushed "OpenAI-compat." past its segment edge.
+          showSelectedIcon: false,
           segments: const [
             ButtonSegment(value: 'anthropic', label: Text('Anthropic')),
             ButtonSegment(value: 'openai', label: Text('OpenAI-compat.')),
@@ -293,13 +326,47 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
             onChanged: (_) => _keyDirty = true,
             decoration: InputDecoration(
               labelText: 'API key',
-              hintText: hasKey ? '•••••••••• saved' : null,
+              hintText: hasKey ? '••••••••••' : null,
               helperText: hasKey
-                  ? 'A key is already saved — leave empty to keep it'
+                  ? 'Leave empty to keep the saved key — paste to replace it'
                   : 'Paste your key here',
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          // Explicit answer to "did I already give it a key?"
+          Row(
+            children: [
+              Icon(
+                hasKey ? Icons.check_circle_rounded : Icons.key_off_outlined,
+                size: 14,
+                color: hasKey ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  hasKey
+                      ? 'A ${_providerLabel(settings.provider)} key is saved '
+                            'in your keychain.'
+                      : 'No ${_providerLabel(settings.provider)} key saved '
+                            'yet.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: hasKey ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (hasKey)
+                TextButton(
+                  onPressed: _removeKey,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: scheme.error,
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                  child: const Text('Remove key'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _ReassurancePanel(
             icon: Icons.lock_outline_rounded,
             text:
@@ -316,31 +383,72 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
                 'any cloud, and no API key is needed.',
           ),
         ],
-        if (_testResult != null) ...[
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Icon(
-                _testSuccess
-                    ? Icons.check_circle_rounded
-                    : Icons.error_outline_rounded,
-                size: 14,
-                color: _testSuccess ? scheme.primary : scheme.error,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  _testResult!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _testSuccess ? scheme.primary : scheme.error,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ],
     );
+  }
+
+  /// Connection-test outcome, rendered in the footer next to the button so it
+  /// is always visible without scrolling.
+  Widget _buildTestStatus(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (_testing) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 13,
+            height: 13,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Contacting provider…',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      );
+    }
+    if (_testResult == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Icon(
+          _testSuccess
+              ? Icons.check_circle_rounded
+              : Icons.error_outline_rounded,
+          size: 14,
+          color: _testSuccess ? scheme.primary : scheme.error,
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            _testResult!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: _testSuccess ? scheme.primary : scheme.error,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _providerLabel(String provider) => switch (provider) {
+    'anthropic' => 'Anthropic',
+    'openai' => 'OpenAI-compatible',
+    'ollama' => 'Ollama',
+    _ => provider,
+  };
+
+  /// Delete the saved key from the keychain (empty key = delete).
+  void _removeKey() {
+    final s = ref.read(llmSettingsProvider);
+    saveApiKey(provider: s.provider, key: '');
+    _key.clear();
+    _keyDirty = false;
+    ref.invalidate(hasApiKeyProvider);
+    setState(() => _testResult = null);
   }
 
   Future<void> _testConnection() async {
@@ -351,6 +459,9 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
     });
     try {
       final reply = await testLlmConnection();
+      // A successful test may have backfilled the "key saved" hint for keys
+      // stored before the hint existed — refresh the status row.
+      ref.invalidate(hasApiKeyProvider);
       setState(() {
         _testSuccess = true;
         _testResult = '✓ Connected: $reply';
@@ -473,19 +584,6 @@ class _SettingsPanelState extends ConsumerState<SettingsPanel> {
               ),
               icon: const Icon(Icons.description_outlined, size: 16),
               label: const Text('Licenses'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _checkingUpdate || version.isEmpty
-                  ? null
-                  : () => _checkForUpdate(version),
-              icon: _checkingUpdate
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.system_update_alt_rounded, size: 16),
-              label: Text(_checkingUpdate ? 'Checking…' : 'Check for updates'),
             ),
           ],
         ),
