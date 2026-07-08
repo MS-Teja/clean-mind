@@ -201,63 +201,22 @@ class _LandingView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const _OrbitHero(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Text(
                 'Clean Mind',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.displaySmall,
+                style: theme.textTheme.headlineMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 'See what fills your disk — and what is safe to reclaim.',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 36),
-              const _LocationChips(),
-              if (fullDiskAccessStatus() == FdaStatus.denied) ...[
-                const SizedBox(height: 12),
-                const _FullDiskAccessBanner(),
-              ],
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: GlassPanel(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      const IconTile(icon: Icons.folder_rounded, size: 34),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          root,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: mono(12.5, color: scheme.onSurfaceVariant),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () async {
-                          final picked = await getDirectoryPath(
-                            initialDirectory: root,
-                          );
-                          if (picked != null) {
-                            ref.read(scanRootProvider.notifier).set(picked);
-                          }
-                        },
-                        child: const Text('Change'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const _RecentScans(),
+              const SizedBox(height: 32),
+              const _ScanTargetCard(),
               const SizedBox(height: 24),
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -276,33 +235,19 @@ class _LandingView extends ConsumerWidget {
                   label: const Text('Scan'),
                 ),
               ),
-              const SizedBox(height: 20),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      size: 13,
-                      color: scheme.outline,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'Fresh scan every time. Nothing leaves your machine '
-                        'unless you turn on AI analysis — and even then, '
-                        'only folder names and sizes.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.outline,
-                        ),
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 18),
+              Text(
+                'Nothing leaves your machine — even optional AI analysis '
+                'sees only folder names and sizes.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.outline,
                 ),
               ),
+              if (fullDiskAccessStatus() == FdaStatus.denied) ...[
+                const SizedBox(height: 6),
+                const _FullDiskAccessHint(),
+              ],
             ],
           ),
         ),
@@ -311,39 +256,124 @@ class _LandingView extends ConsumerWidget {
   }
 }
 
-/// Shown on the landing screen when macOS Full Disk Access is missing, so the
-/// user understands why a home/disk scan may under-report and can fix it.
-class _FullDiskAccessBanner extends StatelessWidget {
-  const _FullDiskAccessBanner();
+/// The one card that owns "what will be scanned": current target + Change +
+/// recent-scans menu on top, quick-pick locations below. Replaces the old
+/// stack of chips + path panel + recents list that crowded the landing view.
+class _ScanTargetCard extends ConsumerWidget {
+  const _ScanTargetCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final root = ref.watch(scanRootProvider);
+    return SizedBox(
+      width: double.infinity,
+      child: GlassPanel(
+        padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const IconTile(icon: Icons.folder_rounded, size: 34),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    root,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: mono(12.5, color: scheme.onSurface),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const _RecentMenu(),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await getDirectoryPath(
+                      initialDirectory: root,
+                    );
+                    if (picked != null) {
+                      ref.read(scanRootProvider.notifier).set(picked);
+                    }
+                  },
+                  child: const Text('Change'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Divider(height: 1, color: scheme.outlineVariant),
+            const SizedBox(height: 10),
+            const _LocationChips(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// History dropdown for recently-scanned roots. Hidden until there is at
+/// least one recent path other than the current target.
+class _RecentMenu extends ConsumerWidget {
+  const _RecentMenu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(scanRootProvider);
+    final recents = recentScanRoots()
+        .where((p) => p != current)
+        .take(6)
+        .toList(growable: false);
+    if (recents.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return PopupMenuButton<String>(
+      tooltip: 'Recent scans',
+      icon: Icon(
+        Icons.history_rounded,
+        size: 18,
+        color: scheme.onSurfaceVariant,
+      ),
+      onSelected: (path) => ref.read(scanRootProvider.notifier).set(path),
+      itemBuilder: (context) => [
+        for (final path in recents)
+          PopupMenuItem(
+            value: path,
+            child: Text(
+              path,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: mono(12, color: scheme.onSurface),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// One quiet line + link shown when macOS Full Disk Access is missing, so a
+/// home/disk scan under-reporting is explained without shouting at the user.
+class _FullDiskAccessHint extends StatelessWidget {
+  const _FullDiskAccessHint();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return GlassPanel(
-      color: scheme.primary.withValues(alpha: 0.07),
-      radius: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Icon(Icons.shield_outlined, size: 18, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Some folders are off-limits to Clean Mind. Grant Full Disk '
-              'Access for complete scan results.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Some folders are off-limits without Full Disk Access.',
+          style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
+        ),
+        TextButton(
+          onPressed: openFullDiskAccessSettings,
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            textStyle: const TextStyle(fontSize: 11),
           ),
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: openFullDiskAccessSettings,
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
+          child: const Text('Grant access'),
+        ),
+      ],
     );
   }
 }
@@ -358,26 +388,23 @@ class _LocationChips extends ConsumerWidget {
     final locations = standardLocations()
         .where((l) => l.exists)
         .toList(growable: false);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 460),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final loc in locations)
-            _PresetChip(
-              icon: _iconForKind(loc.kind),
-              label: loc.label,
-              path: loc.path,
-            ),
+    return Wrap(
+      alignment: WrapAlignment.start,
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final loc in locations)
           _PresetChip(
-            icon: Icons.storage_rounded,
-            label: 'Entire disk',
-            path: diskRootPath,
+            icon: _iconForKind(loc.kind),
+            label: loc.label,
+            path: loc.path,
           ),
-        ],
-      ),
+        _PresetChip(
+          icon: Icons.storage_rounded,
+          label: 'Entire disk',
+          path: diskRootPath,
+        ),
+      ],
     );
   }
 }
@@ -398,68 +425,6 @@ IconData _iconForKind(String kind) {
       return Icons.storage_rounded;
     default:
       return Icons.folder_rounded;
-  }
-}
-
-/// Recently-scanned roots (paths only). Clicking one sets it as the scan root.
-class _RecentScans extends ConsumerWidget {
-  const _RecentScans();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Exclude the current root so the list only shows *other* recent picks.
-    final current = ref.watch(scanRootProvider);
-    final recents = recentScanRoots()
-        .where((p) => p != current)
-        .take(4)
-        .toList(growable: false);
-    if (recents.isEmpty) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Recent',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 6),
-          for (final path in recents)
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => ref.read(scanRootProvider.notifier).set(path),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.history_rounded,
-                      size: 13,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 380),
-                      child: Text(
-                        path,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: mono(11.5, color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 }
 
@@ -489,27 +454,26 @@ class _PresetChip extends ConsumerWidget {
       child: InkWell(
         onTap: () => ref.read(scanRootProvider.notifier).set(path),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: ShapeDecoration(
+            // Quiet by default; only the selected pick draws attention.
             color: selected
-                ? scheme.primary.withValues(alpha: 0.12)
-                : Colors.transparent,
+                ? scheme.primary.withValues(alpha: 0.14)
+                : scheme.onSurface.withValues(alpha: 0.05),
             shape: StadiumBorder(
-              side: BorderSide(
-                color: selected
-                    ? scheme.primary.withValues(alpha: 0.5)
-                    : scheme.outlineVariant,
-              ),
+              side: selected
+                  ? BorderSide(color: scheme.primary.withValues(alpha: 0.5))
+                  : BorderSide.none,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: fg),
-              const SizedBox(width: 6),
+              Icon(icon, size: 13, color: fg),
+              const SizedBox(width: 5),
               Text(
                 label,
-                style: theme.textTheme.labelMedium?.copyWith(color: fg),
+                style: theme.textTheme.labelSmall?.copyWith(color: fg),
               ),
             ],
           ),
