@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build-macos:
-    name: Build (macos-latest)
+    name: Build macOS (universal)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,9 @@ jobs:
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both desktop targets so the Rust core is built universal.
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
@@ -35,6 +38,21 @@ jobs:
 
       - run: flutter pub get
       - run: flutter build macos --release
+
+      - name: Verify the app is universal (arm64 + x86_64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build/macos/Build/Products/Release/Clean Mind.app"
+          for bin in "$APP/Contents/MacOS/Clean Mind" \
+                     "$APP/Contents/Frameworks/rust_lib_clean_mind.framework/Versions/A/rust_lib_clean_mind"; do
+            info="$(lipo -info "$bin")"
+            echo "$info"
+            case "$info" in
+              *x86_64*arm64*|*arm64*x86_64*) ;;
+              *) echo "::error::$bin is not a universal binary"; exit 1 ;;
+            esac
+          done
 
       - name: Package DMG
         shell: bash
@@ -51,8 +69,15 @@ jobs:
           path: CleanMind-*-macos.dmg
 
   build-linux:
-    name: Build (ubuntu-latest)
-    runs-on: ubuntu-latest
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -88,20 +113,27 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p staging/clean-mind
-          cp -R build/linux/x64/release/bundle/. staging/clean-mind/
+          cp -R "build/linux/${{ matrix.arch }}/release/bundle/." staging/clean-mind/
           cp packaging/linux/io.github.msteja.cleanmind.desktop staging/clean-mind/
           cp packaging/linux/io.github.msteja.cleanmind.png staging/clean-mind/
           install -m 755 packaging/linux/install.sh staging/clean-mind/
-          tar -czf "CleanMind-${VERSION}-linux-x64.tar.gz" -C staging clean-mind
+          tar -czf "CleanMind-${VERSION}-linux-${{ matrix.arch }}.tar.gz" -C staging clean-mind
 
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-tarball
-          path: CleanMind-*-linux-x64.tar.gz
+          name: linux-tarball-${{ matrix.arch }}
+          path: CleanMind-*-linux-*.tar.gz
 
   build-windows:
-    name: Build (windows-latest)
-    runs-on: windows-latest
+    name: Build Windows (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -130,12 +162,12 @@ jobs:
       - name: Package zip
         shell: pwsh
         run: |
-          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "CleanMind-${env:VERSION}-windows-x64.zip"
+          Compress-Archive -Path "build\windows\${{ matrix.arch }}\runner\Release\*" -DestinationPath "CleanMind-${env:VERSION}-windows-${{ matrix.arch }}.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-zip
-          path: CleanMind-*-windows-x64.zip
+          name: windows-zip-${{ matrix.arch }}
+          path: CleanMind-*-windows-*.zip
 
   release:
     name: Create release
@@ -155,12 +187,12 @@ jobs:
           body: |
             ## Install
 
-            ### macOS
+            ### macOS (universal — Apple silicon + Intel)
             Easiest via Homebrew (no Gatekeeper hoops):
             ```
             brew install --cask MS-Teja/clean-mind/clean-mind
             ```
-            Or download the DMG, open it, drag **Clean Mind** to Applications.
+            Or download the DMG, open it, drag **Clean Mind** to Applications. One DMG covers both Apple silicon and Intel Macs.
 
             This free app is not notarized (there is no paid Apple Developer account behind it), so the first launch needs one extra step:
             - **macOS 15 (Sequoia) and later:** open the app once (it will be blocked), then go to **System Settings → Privacy & Security**, scroll down to *"Clean Mind" was blocked*, and click **Open Anyway**.
@@ -168,9 +200,9 @@ jobs:
             - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
 
             ### Linux (experimental)
-            Extract the tarball, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
+            Pick the tarball for your CPU — `linux-x64` (Intel/AMD) or `linux-arm64` (Raspberry Pi 5, Ampere, Apple-silicon VMs). Extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
 
             ### Windows (experimental)
-            Extract the zip and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+            Pick the zip for your CPU — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs). Extract it and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
 
             Linux and Windows builds compile and pass tests in CI but have had less real-world testing than macOS — issue reports are very welcome.
