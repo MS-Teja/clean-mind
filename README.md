@@ -36,7 +36,8 @@ The agentic/vibe-coding era makes this worse than ever: spin up a handful of thr
 - ✅ **Safe by construction** — a three-tier model, a hard denylist nothing can override, and Trash-first deletion. Permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
 - 🤖 **AI on your terms** — bring your own Anthropic or OpenAI-compatible key, or run a fully local model via Ollama. The AI only ever sees directory *metadata*, never file contents, and can never promote something to "safe" on its own.
 - 🔒 **Private and offline by default** — no telemetry, no account, no bundled inference. Fresh scan each launch; nothing cached, nothing runs in the background.
-- ⚡ **Native and fast** — a parallel Rust core (hardlink-aware, APFS-clone-aware, safe on very deep trees) under a Flutter UI.
+- ⚡ **Native and fast** — a parallel Rust core (rayon work-stealing across all your cores) walks a home directory of hundreds of thousands of files in seconds, measures true on-disk size (hardlink- and APFS-clone-aware), stays safe on pathologically deep trees, and keeps the UI smooth by folding tiny files and streaming progress. No Electron, no background daemon, low memory.
+- 💻 **Truly cross-platform** — one Rust core and one Flutter UI ship a native app on **macOS, Linux, and Windows**, each using the right OS conventions (Trash vs Recycle Bin, per-platform volumes, long-path support on Windows).
 - 🧭 **Made to explore** — drag a folder in to scan it, search the whole scan by name, switch between the treemap and a sortable list, and move back/forward through folders you've visited.
 
 ## Screenshots
@@ -48,6 +49,12 @@ An interactive treemap sizes every tile by how much space it takes; green tiles 
 The insights panel groups reclaimable items and, for each one, explains *why* it's safe and the exact command that regenerates it.
 
 ![Clean Mind's insights panel explaining each reclaimable item](docs/screenshot-insights.png)
+
+<sub>Screenshots and the demo are captured on macOS; the same UI runs natively on Linux and Windows.</sub>
+
+## Performance
+
+Clean Mind is built to feel instant. The scanner is a parallel Rust walk on a rayon work-stealing pool, so it uses every core; a full home directory (hundreds of thousands of files) typically finishes in a few seconds. It measures **actual on-disk usage** (`st_blocks` on Unix), dedupes hardlinks by `(device, inode)`, and is APFS-clone-aware, so the numbers match what the OS reports rather than inflated logical sizes. Files below a threshold are folded into one node per directory so the tree stays small and the treemap renders smoothly even on huge folders, and progress streams live during the scan. It's a native binary — no Electron, no bundled runtime, no background service — so idle cost is zero and memory stays low.
 
 ## How it works
 
@@ -75,7 +82,7 @@ Grab the build for your platform from the [latest release](https://github.com/MS
 brew install --cask MS-Teja/clean-mind/clean-mind
 ```
 
-**macOS (DMG)** — open the DMG and drag **Clean Mind** to Applications. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
+**macOS (DMG)** — open the DMG and drag **Clean Mind** to Applications. One universal DMG covers both Apple silicon and Intel Macs. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
 
 - *macOS 15 and later:* open the app once (it will be blocked), then **System Settings → Privacy & Security → Open Anyway**.
 - *macOS 14 and earlier:* right-click the app → **Open** → **Open**.
@@ -83,9 +90,9 @@ brew install --cask MS-Teja/clean-mind/clean-mind
 
 On first scan, macOS will ask for access to folders like Documents and Desktop — that's the normal per-folder permission prompt. For complete results (Mail, Safari, and other protected data), grant **Full Disk Access**; the app detects when it's missing and offers a shortcut to the right settings pane.
 
-**Linux** *(experimental)* — extract the tarball, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
+**Linux** *(experimental)* — pick the tarball for your CPU (`linux-x64` for Intel/AMD, `linux-arm64` for Raspberry Pi 5, Ampere, and other Arm machines), extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
 
-**Windows** *(experimental)* — extract the zip and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
+**Windows** *(experimental)* — pick the zip for your CPU (`windows-x64` for Intel/AMD, `windows-arm64` for Snapdragon X and other Arm PCs), extract it, and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
 
 The Linux and Windows builds compile and pass tests in CI but have seen less real-world use than macOS — issue reports are very welcome.
 

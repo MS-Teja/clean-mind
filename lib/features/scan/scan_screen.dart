@@ -14,6 +14,7 @@ import '../../util/format.dart';
 import '../../util/platform.dart';
 import '../insights/insights_providers.dart';
 import '../results/results_screen.dart';
+import '../settings/settings_dialog.dart';
 import '../results/tree_providers.dart';
 import 'scan_providers.dart';
 
@@ -76,10 +77,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             child: switch (scan) {
               ScanIdle() => const _LandingView(key: ValueKey('landing')),
               ScanRunning(:final progress) => _ScanningView(
-                  key: const ValueKey('scanning'), progress: progress),
+                key: const ValueKey('scanning'),
+                progress: progress,
+              ),
               ScanDone() => const ResultsScreen(key: ValueKey('results')),
-              ScanFailed(:final message) =>
-                _FailedView(key: const ValueKey('failed'), message: message),
+              ScanFailed(:final message) => _FailedView(
+                key: const ValueKey('failed'),
+                message: message,
+              ),
             },
           ),
           if (_dragging) const _DropOverlay(),
@@ -102,21 +107,24 @@ class _DropOverlay extends StatelessWidget {
           color: scheme.scrim.withValues(alpha: 0.45),
           child: Center(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
               decoration: BoxDecoration(
                 color: scheme.surface,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                    color: scheme.primary.withValues(alpha: 0.6), width: 2),
+                  color: scheme.primary.withValues(alpha: 0.6),
+                  width: 2,
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.download_rounded, size: 34, color: scheme.primary),
                   const SizedBox(height: 10),
-                  Text('Drop a folder to scan it',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Drop a folder to scan it',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ],
               ),
             ),
@@ -136,112 +144,145 @@ class _LandingView extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final root = ref.watch(scanRootProvider);
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const _OrbitHero(),
-                const SizedBox(height: 24),
-                Text(
-                  'Clean Mind',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displaySmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'See what fills your disk — and what is safe to reclaim.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 36),
-                const _LocationChips(),
-                if (fullDiskAccessStatus() == FdaStatus.denied) ...[
-                  const SizedBox(height: 12),
-                  const _FullDiskAccessBanner(),
-                ],
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: GlassPanel(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        const IconTile(icon: Icons.folder_rounded, size: 34),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            root,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: mono(12.5, color: scheme.onSurfaceVariant),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () async {
-                            final picked = await getDirectoryPath(
-                                initialDirectory: root);
-                            if (picked != null) {
-                              ref.read(scanRootProvider.notifier).set(picked);
-                            }
-                          },
-                          child: const Text('Change'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const _RecentScans(),
-                const SizedBox(height: 24),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: scheme.primary.withValues(alpha: 0.35),
-                        blurRadius: 24,
-                      ),
-                    ],
-                  ),
-                  child: FilledButton.icon(
-                    onPressed: () =>
-                        ref.read(scanControllerProvider.notifier).start(),
-                    icon: const Icon(Icons.radar_rounded),
-                    label: const Text('Scan'),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.shield_outlined,
-                          size: 13, color: scheme.outline),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'Fresh scan every time. Nothing leaves your machine '
-                          'unless you turn on AI analysis — and even then, '
-                          'only folder names and sizes.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: scheme.outline),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+      body: Stack(
+        children: [
+          // Settings should be reachable before the first scan too.
+          Positioned(
+            top: 34,
+            right: 14,
+            child: IconButton(
+              tooltip: 'Settings',
+              icon: const Icon(Icons.settings_rounded),
+              color: scheme.onSurfaceVariant,
+              onPressed: () => showSettingsDialog(context),
             ),
+          ),
+          _buildBody(context, theme, scheme, root, ref),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme scheme,
+    String root,
+    WidgetRef ref,
+  ) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const _OrbitHero(),
+              const SizedBox(height: 24),
+              Text(
+                'Clean Mind',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.displaySmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'See what fills your disk — and what is safe to reclaim.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 36),
+              const _LocationChips(),
+              if (fullDiskAccessStatus() == FdaStatus.denied) ...[
+                const SizedBox(height: 12),
+                const _FullDiskAccessBanner(),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: GlassPanel(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.folder_rounded, size: 34),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          root,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: mono(12.5, color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await getDirectoryPath(
+                            initialDirectory: root,
+                          );
+                          if (picked != null) {
+                            ref.read(scanRootProvider.notifier).set(picked);
+                          }
+                        },
+                        child: const Text('Change'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const _RecentScans(),
+              const SizedBox(height: 24),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 24,
+                    ),
+                  ],
+                ),
+                child: FilledButton.icon(
+                  onPressed: () =>
+                      ref.read(scanControllerProvider.notifier).start(),
+                  icon: const Icon(Icons.radar_rounded),
+                  label: const Text('Scan'),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 13,
+                      color: scheme.outline,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Fresh scan every time. Nothing leaves your machine '
+                        'unless you turn on AI analysis — and even then, '
+                        'only folder names and sizes.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.outline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -270,8 +311,9 @@ class _FullDiskAccessBanner extends StatelessWidget {
             child: Text(
               'Some folders are off-limits to Clean Mind. Grant Full Disk '
               'Access for complete scan results.',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -292,8 +334,9 @@ class _LocationChips extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locations =
-        standardLocations().where((l) => l.exists).toList(growable: false);
+    final locations = standardLocations()
+        .where((l) => l.exists)
+        .toList(growable: false);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 460),
       child: Wrap(
@@ -358,22 +401,27 @@ class _RecentScans extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Recent',
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: scheme.onSurfaceVariant)),
+          Text(
+            'Recent',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 6),
           for (final path in recents)
             InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () => ref.read(scanRootProvider.notifier).set(path),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.history_rounded,
-                        size: 13, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.history_rounded,
+                      size: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 380),
@@ -438,8 +486,10 @@ class _PresetChip extends ConsumerWidget {
             children: [
               Icon(icon, size: 14, color: fg),
               const SizedBox(width: 6),
-              Text(label,
-                  style: theme.textTheme.labelMedium?.copyWith(color: fg)),
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(color: fg),
+              ),
             ],
           ),
         ),
@@ -574,13 +624,20 @@ class _ScanningView extends ConsumerWidget {
                   duration: const Duration(milliseconds: 200),
                   builder: (context, value, _) => Text(
                     formatBytes(value.round()),
-                    style: mono(44, weight: FontWeight.w700, color: scheme.primary),
+                    style: mono(
+                      44,
+                      weight: FontWeight.w700,
+                      color: scheme.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('found so far',
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
+                Text(
+                  'found so far',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -746,8 +803,7 @@ class _RadarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RadarPainter oldDelegate) =>
-      oldDelegate.t != t;
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) => oldDelegate.t != t;
 }
 
 class _FailedView extends ConsumerWidget {
@@ -774,8 +830,11 @@ class _FailedView extends ConsumerWidget {
                   size: 44,
                 ),
                 const SizedBox(height: 16),
-                Text(message,
-                    textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge,
+                ),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: () =>

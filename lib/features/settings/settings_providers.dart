@@ -14,17 +14,17 @@ class LlmSettingsController extends Notifier<LlmSettings> {
     state = settings;
   }
 
-  /// Switch provider, resetting base URL and model to that provider's
-  /// defaults.
+  /// Switch provider, restoring whatever base URL and model the user last
+  /// saved for it (or that provider's defaults if never configured).
   void switchProvider(String provider) {
-    final defaults = providerDefaults(provider: provider);
-    update(defaults);
+    update(settingsForProvider(provider: provider));
   }
 }
 
 final llmSettingsProvider =
     NotifierProvider<LlmSettingsController, LlmSettings>(
-        LlmSettingsController.new);
+      LlmSettingsController.new,
+    );
 
 /// Whether a key is stored for the given provider. Bumped via invalidation
 /// after a save.

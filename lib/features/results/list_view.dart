@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
+import '../../src/rust/api/system.dart';
 import '../../theme.dart';
 import '../../util/format.dart';
 import '../scan/scan_providers.dart';
@@ -10,11 +11,20 @@ import 'tree_providers.dart';
 /// (column, ascending?) the list view is sorted by. Descending by size default.
 final _listSortProvider =
     NotifierProvider<_ListSortController, (SortKey, bool)>(
-        _ListSortController.new);
+      _ListSortController.new,
+    );
 
 class _ListSortController extends Notifier<(SortKey, bool)> {
   @override
-  (SortKey, bool) build() => (SortKey.size, false);
+  (SortKey, bool) build() {
+    final p = getUiPrefs();
+    final key = switch (p.sortKey) {
+      'name' => SortKey.name,
+      'items' => SortKey.items,
+      _ => SortKey.size,
+    };
+    return (key, p.sortAscending);
+  }
 
   /// Toggle direction if the same column is tapped, else switch column
   /// (size/items start descending; name starts ascending).
@@ -25,6 +35,23 @@ class _ListSortController extends Notifier<(SortKey, bool)> {
     } else {
       state = (key, key == SortKey.name);
     }
+    _persist();
+  }
+
+  void _persist() {
+    final (key, asc) = state;
+    final p = getUiPrefs();
+    setUiPrefs(
+      prefs: UiPrefs(
+        resultsView: p.resultsView,
+        sortKey: switch (key) {
+          SortKey.name => 'name',
+          SortKey.items => 'items',
+          SortKey.size => 'size',
+        },
+        sortAscending: asc,
+      ),
+    );
   }
 }
 
@@ -40,14 +67,21 @@ class ListDirView extends ConsumerWidget {
     final (key, asc) = ref.watch(_listSortProvider);
     ref.watch(scanControllerProvider); // recompute on a new scan
     final rows = getChildrenSorted(
-        id: focus.id, key: key, ascending: asc, limit: 500);
+      id: focus.id,
+      key: key,
+      ascending: asc,
+      limit: 500,
+    );
     final selectedId = ref.watch(selectedNodeProvider)?.id;
 
     if (rows.isEmpty) {
       return Center(
-        child: Text('Nothing to show in here',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        child: Text(
+          'Nothing to show in here',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       );
     }
 
@@ -58,10 +92,8 @@ class ListDirView extends ConsumerWidget {
         Expanded(
           child: ListView.builder(
             itemCount: rows.length,
-            itemBuilder: (context, i) => _Row(
-              node: rows[i],
-              selected: rows[i].id == selectedId,
-            ),
+            itemBuilder: (context, i) =>
+                _Row(node: rows[i], selected: rows[i].id == selectedId),
           ),
         ),
       ],
@@ -91,13 +123,15 @@ class _HeaderRow extends ConsumerWidget {
                 ? MainAxisAlignment.end
                 : MainAxisAlignment.start,
             children: [
-              Text(label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: active
-                        ? theme.colorScheme.onSurface
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  )),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: active
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
               if (active)
                 Icon(
                   ascending
@@ -118,11 +152,13 @@ class _HeaderRow extends ConsumerWidget {
         children: [
           Expanded(flex: 5, child: head('Name', SortKey.name)),
           Expanded(
-              flex: 2,
-              child: head('Items', SortKey.items, align: TextAlign.right)),
+            flex: 2,
+            child: head('Items', SortKey.items, align: TextAlign.right),
+          ),
           Expanded(
-              flex: 2,
-              child: head('Size', SortKey.size, align: TextAlign.right)),
+            flex: 2,
+            child: head('Size', SortKey.size, align: TextAlign.right),
+          ),
         ],
       ),
     );
@@ -187,16 +223,20 @@ class _Row extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          decoration:
-                              deleted ? TextDecoration.lineThrough : null,
+                          decoration: deleted
+                              ? TextDecoration.lineThrough
+                              : null,
                           color: deleted ? scheme.onSurfaceVariant : null,
                         ),
                       ),
                     ),
                     if (tierColor != null && node.tier == FsTier.safe) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle_rounded,
-                          size: 12, color: tierColor),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 12,
+                        color: tierColor,
+                      ),
                     ],
                   ],
                 ),
@@ -205,9 +245,11 @@ class _Row extends ConsumerWidget {
                 flex: 2,
                 child: Text(
                   node.kind == FsKind.dir || node.kind == FsKind.smallFiles
-                      ? formatCount(node.kind == FsKind.smallFiles
-                          ? node.itemCount
-                          : items)
+                      ? formatCount(
+                          node.kind == FsKind.smallFiles
+                              ? node.itemCount
+                              : items,
+                        )
                       : '—',
                   textAlign: TextAlign.right,
                   style: mono(11.5, color: scheme.onSurfaceVariant),
@@ -246,12 +288,18 @@ class SearchResultsView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off_rounded,
-                size: 40, color: scheme.outlineVariant),
+            Icon(
+              Icons.search_off_rounded,
+              size: 40,
+              color: scheme.outlineVariant,
+            ),
             const SizedBox(height: 10),
-            Text('No matches',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: scheme.onSurfaceVariant)),
+            Text(
+              'No matches',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
@@ -264,8 +312,9 @@ class SearchResultsView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
           child: Text(
             '${results.length} match${results.length == 1 ? '' : 'es'}',
-            style: theme.textTheme.labelMedium
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ),
         Expanded(
@@ -287,7 +336,9 @@ class SearchResultsView extends ConsumerWidget {
                   onTap: () => revealNodeId(ref, node.id),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -302,21 +353,29 @@ class SearchResultsView extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(node.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium),
-                              Text(node.path,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: mono(10.5,
-                                      color: scheme.onSurfaceVariant)),
+                              Text(
+                                node.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              Text(
+                                node.path,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: mono(
+                                  10.5,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text(formatBytes(node.size),
-                            style: mono(12, color: scheme.onSurface)),
+                        Text(
+                          formatBytes(node.size),
+                          style: mono(12, color: scheme.onSurface),
+                        ),
                       ],
                     ),
                   ),

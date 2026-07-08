@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -20,6 +21,45 @@ pub struct Settings {
     /// first, capped at [`RECENT_ROOTS_CAP`]. Powers the landing "recent scans".
     #[serde(default)]
     pub recent_roots: Vec<String>,
+    /// Providers that have a key saved in the keychain. A **non-secret** hint
+    /// so the UI can say "a key is stored" without reading the keychain (which
+    /// triggers an OS password prompt). The secret itself never lives here.
+    #[serde(default)]
+    pub key_providers: Vec<String>,
+    /// Per-provider base URL / model, remembered so switching providers in
+    /// settings never wipes a customized model name.
+    #[serde(default)]
+    pub provider_configs: BTreeMap<String, ProviderConfig>,
+    /// Small UI preferences (view mode, sort) that should survive restarts.
+    #[serde(default)]
+    pub ui: UiConfig,
+}
+
+/// Saved base URL + model for one provider.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderConfig {
+    pub base_url: String,
+    pub model: String,
+}
+
+/// Non-critical UI preferences persisted alongside settings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiConfig {
+    /// "treemap" | "list"
+    pub results_view: String,
+    /// "size" | "name" | "items"
+    pub sort_key: String,
+    pub sort_ascending: bool,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            results_view: "treemap".into(),
+            sort_key: "size".into(),
+            sort_ascending: false,
+        }
+    }
 }
 
 /// How many recent scan roots to remember.
@@ -34,6 +74,9 @@ impl Default for Settings {
             redact: false,
             scan_root: None,
             recent_roots: Vec::new(),
+            key_providers: Vec::new(),
+            provider_configs: BTreeMap::new(),
+            ui: UiConfig::default(),
         }
     }
 }
@@ -44,6 +87,29 @@ impl Settings {
         self.recent_roots.retain(|p| p != path);
         self.recent_roots.insert(0, path.to_string());
         self.recent_roots.truncate(RECENT_ROOTS_CAP);
+    }
+
+    /// Saved base URL + model for `provider`, falling back to the built-in
+    /// defaults — so switching providers restores what the user configured.
+    pub fn config_for(&self, provider: &str) -> ProviderConfig {
+        self.provider_configs
+            .get(provider)
+            .cloned()
+            .unwrap_or_else(|| ProviderConfig {
+                base_url: default_base_url(provider).into(),
+                model: default_model(provider).into(),
+            })
+    }
+
+    /// Remember `base_url`/`model` as the saved config for `provider`.
+    pub fn remember_provider(&mut self, provider: &str, base_url: &str, model: &str) {
+        self.provider_configs.insert(
+            provider.to_string(),
+            ProviderConfig {
+                base_url: base_url.to_string(),
+                model: model.to_string(),
+            },
+        );
     }
 }
 
@@ -87,14 +153,31 @@ const KEYRING_SERVICE: &str = "clean-mind";
 
 pub fn save_api_key(provider: &str, key: &str) -> Result<(), String> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, provider).map_err(|e| e.to_string())?;
+    let mut settings = load();
     if key.is_empty() {
         let _ = entry.delete_credential();
-        Ok(())
+        settings.key_providers.retain(|p| p != provider);
     } else {
-        entry.set_password(key).map_err(|e| e.to_string())
+        entry.set_password(key).map_err(|e| e.to_string())?;
+        if !settings.key_providers.iter().any(|p| p == provider) {
+            settings.key_providers.push(provider.to_string());
+        }
     }
+    // Persist the non-secret "has a key" hint so the UI never has to read the
+    // keychain (and trigger an OS prompt) just to render settings.
+    let _ = save(&settings);
+    Ok(())
 }
 
+/// Whether a key is saved for `provider`, checked via the non-secret settings
+/// hint — does NOT touch the keychain, so it never prompts.
+pub fn has_saved_key(provider: &str) -> bool {
+    load().key_providers.iter().any(|p| p == provider)
+}
+
+/// Read the actual secret from the keychain. This CAN trigger an OS password
+/// prompt, so only call it when making a real API request (test / analysis) —
+/// never just to render the UI.
 pub fn get_api_key(provider: &str) -> Option<String> {
     keyring::Entry::new(KEYRING_SERVICE, provider)
         .ok()?

@@ -103,10 +103,11 @@ pub fn open(path: &Path) -> Result<(), String> {
     };
     #[cfg(target_os = "windows")]
     let mut cmd = {
-        // `explorer <path>` opens files with their default app and dirs in a
-        // window; it doesn't need the `start` shell built-in.
-        let mut c = std::process::Command::new("explorer");
-        c.arg(path);
+        // `start` opens a file with its default app and a folder in Explorer.
+        // The empty "" is the required window-title arg so a quoted path isn't
+        // consumed as the title; `explorer <file>` wouldn't open the default app.
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/c", "start", ""]).arg(path);
         c
     };
     #[cfg(all(unix, not(target_os = "macos")))]

@@ -14,13 +14,18 @@ LlmSettings getLlmSettings() =>
 void setLlmSettings({required LlmSettings settings}) =>
     RustLib.instance.api.crateApiLlmSetLlmSettings(settings: settings);
 
-LlmSettings providerDefaults({required String provider}) =>
-    RustLib.instance.api.crateApiLlmProviderDefaults(provider: provider);
+/// Settings to show when the user picks `provider`: whatever they last saved
+/// for it, or the built-in defaults if they never configured it.
+LlmSettings settingsForProvider({required String provider}) =>
+    RustLib.instance.api.crateApiLlmSettingsForProvider(provider: provider);
 
 /// Store the key in the OS keychain — never in config files. Empty deletes.
 void saveApiKey({required String provider, required String key}) =>
     RustLib.instance.api.crateApiLlmSaveApiKey(provider: provider, key: key);
 
+/// Whether a key is saved for `provider`. Uses the non-secret settings hint, so
+/// it never reads the keychain (and never triggers an OS password prompt) —
+/// safe to call while rendering the settings screen.
 bool hasApiKey({required String provider}) =>
     RustLib.instance.api.crateApiLlmHasApiKey(provider: provider);
 

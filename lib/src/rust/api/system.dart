@@ -33,6 +33,11 @@ void openTrash() => RustLib.instance.api.crateApiSystemOpenTrash();
 void openUrl({required String url}) =>
     RustLib.instance.api.crateApiSystemOpenUrl(url: url);
 
+UiPrefs getUiPrefs() => RustLib.instance.api.crateApiSystemGetUiPrefs();
+
+void setUiPrefs({required UiPrefs prefs}) =>
+    RustLib.instance.api.crateApiSystemSetUiPrefs(prefs: prefs);
+
 /// Ask GitHub for the latest published release. Only ever called from an
 /// explicit "Check for updates" action — nothing phones home on its own.
 Future<UpdateCheck> checkForUpdate({required String currentVersion}) => RustLib
@@ -80,6 +85,36 @@ class Location {
           path == other.path &&
           kind == other.kind &&
           exists == other.exists;
+}
+
+/// UI preferences that survive restarts (persisted in settings.json by the
+/// Rust core — never scan data, never secrets).
+class UiPrefs {
+  /// "treemap" | "list"
+  final String resultsView;
+
+  /// "size" | "name" | "items"
+  final String sortKey;
+  final bool sortAscending;
+
+  const UiPrefs({
+    required this.resultsView,
+    required this.sortKey,
+    required this.sortAscending,
+  });
+
+  @override
+  int get hashCode =>
+      resultsView.hashCode ^ sortKey.hashCode ^ sortAscending.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UiPrefs &&
+          runtimeType == other.runtimeType &&
+          resultsView == other.resultsView &&
+          sortKey == other.sortKey &&
+          sortAscending == other.sortAscending;
 }
 
 class UpdateCheck {
