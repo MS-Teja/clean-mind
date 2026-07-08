@@ -60,7 +60,9 @@ stays truthful.
 - 🗺️ A treemap that makes sense
 - 🧠 It knows developer junk (with the regenerate command)
 - ✅ Safe by construction (three tiers + hard denylist + Trash-first)
-- 🤖 AI on your terms (BYO key or local Ollama; metadata only)
+- 🤖 AI on your terms (BYO key or local Ollama; metadata only; optional
+  pseudonymization replaces personal folder names with `dir-1`, `dir-2`, …
+  before anything leaves the machine)
 - 🔒 Private and offline by default
 - ⚡ Native and fast (parallel Rust, seconds, low memory, no Electron)
 
@@ -68,6 +70,9 @@ stays truthful.
 Three tiers: **Safe · regenerable** (rules-verified, one-click) → **Review**
 (LLM suggestions, never one-click) → **Protected** (hard denylist nothing can
 override). The rules engine, not the AI, is the source of truth.
+Privacy sub-point worth a line: with pseudonymization on, the AI never even
+learns your folder names — it sees `dir-1`, `dir-2`, … (structural names like
+`node_modules` stay readable) and answers are mapped back to real paths locally.
 
 ### 6. Performance strip
 Parallel Rust core across every core · a home directory in seconds · true on-disk

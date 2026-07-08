@@ -34,7 +34,7 @@ The agentic/vibe-coding era makes this worse than ever: spin up a handful of thr
 - 🗺️ **A treemap that makes sense** — a squarified, drill-down map of your disk with breadcrumbs and tier-colored badges, so the biggest space hogs are the biggest tiles.
 - 🧠 **It knows developer junk** — a deterministic rules engine recognizes `node_modules`, cargo `target/`, Xcode DerivedData, package-manager caches, build artifacts and more across six ecosystems, and tells you *how* each one regenerates.
 - ✅ **Safe by construction** — a three-tier model, a hard denylist nothing can override, and Trash-first deletion. Permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
-- 🤖 **AI on your terms** — bring your own Anthropic or OpenAI-compatible key, or run a fully local model via Ollama. The AI only ever sees directory *metadata*, never file contents, and can never promote something to "safe" on its own.
+- 🤖 **AI on your terms** — bring your own Anthropic or OpenAI-compatible key, or run a fully local model via Ollama. The AI only ever sees directory *metadata*, never file contents, and can never promote something to "safe" on its own. An optional pseudonymization mode even hides your folder names — the model sees `dir-1`, `dir-2`, … while `node_modules` and friends stay readable.
 - 🔒 **Private and offline by default** — no telemetry, no account, no bundled inference. Fresh scan each launch; nothing cached, nothing runs in the background.
 - ⚡ **Native and fast** — a parallel Rust core (rayon work-stealing across all your cores) walks a home directory of hundreds of thousands of files in seconds, measures true on-disk size (hardlink- and APFS-clone-aware), stays safe on pathologically deep trees, and keeps the UI smooth by folding tiny files and streaming progress. No Electron, no background daemon, low memory.
 - 💻 **Truly cross-platform** — one Rust core and one Flutter UI ship a native app on **macOS, Linux, and Windows**, each using the right OS conventions (Trash vs Recycle Bin, per-platform volumes, long-path support on Windows).
@@ -128,7 +128,7 @@ flutter_rust_bridge_codegen generate
 
 - No telemetry, no accounts, no bundled inference.
 - The AI layer is opt-in, and only ever sends directory **metadata** (paths, sizes, timestamps) — never file contents.
-- An optional redaction mode pseudonymizes path names under your home directory before anything leaves your machine.
+- An optional pseudonymization mode strips identity from what the AI sees: personal folder names are replaced with placeholders (`dir-1`, `dir-2`, …) before anything leaves your machine, while structural names like `node_modules` stay readable so the analysis still works. The AI's answers are mapped back to your real folders locally.
 - API keys are stored in the operating system keychain, not in config files.
 
 ## Project status
