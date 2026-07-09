@@ -292,7 +292,9 @@ fn walk(
         ctx.progress.record_skip(path);
         return node;
     }
-    if let Ok(mut cur) = ctx.progress.current.lock() {
+    // try_lock: the progress text is sampled every ~120ms, so a missed update
+    // is invisible — never worth serializing the workers over.
+    if let Ok(mut cur) = ctx.progress.current.try_lock() {
         *cur = path.to_string_lossy().into_owned();
     }
 
