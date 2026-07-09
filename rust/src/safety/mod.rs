@@ -7,8 +7,10 @@ const PROTECTED_HOME_DIRS: &[&str] = &[
     "Desktop",
     "Pictures",
     "Movies",
+    "Videos",
     "Music",
     "Photos",
+    "Contacts",
     ".ssh",
     ".gnupg",
     "OneDrive",
@@ -21,6 +23,9 @@ const PROTECTED_HOME_SUBPATHS: &[&[&str]] = &[
     &["Library", "Messages"],
     &["Library", "Application Support", "MobileSync"],
     &["AppData", "Roaming", "Microsoft", "Credentials"],
+    &["AppData", "Roaming", "Microsoft", "Protect"],
+    &["AppData", "Local", "Microsoft", "Credentials"],
+    &[".local", "share", "keyrings"],
 ];
 
 /// Absolute prefixes that are OS or application territory.
@@ -150,6 +155,22 @@ mod tests {
         assert!(protected_reason(&h.join("Documents/taxes/2025"), Some(&h)).is_some());
         assert!(protected_reason(&h.join(".ssh"), Some(&h)).is_some());
         assert!(protected_reason(&h.join("Pictures/wedding"), Some(&h)).is_some());
+        // Videos is the Windows/Linux equivalent of Movies.
+        assert!(protected_reason(&h.join("Videos"), Some(&h)).is_some());
+        assert!(protected_reason(&h.join("Videos/vacation"), Some(&h)).is_some());
+        assert!(protected_reason(&h.join("Contacts"), Some(&h)).is_some());
+    }
+
+    #[test]
+    fn secret_stores_protected() {
+        let h = home();
+        // GNOME keyring (Linux) holds login secrets.
+        assert!(protected_reason(&h.join(".local/share/keyrings"), Some(&h)).is_some());
+        // DPAPI master keys and credential vaults (Windows).
+        assert!(protected_reason(&h.join("AppData/Roaming/Microsoft/Protect"), Some(&h)).is_some());
+        assert!(
+            protected_reason(&h.join("AppData/Local/Microsoft/Credentials"), Some(&h)).is_some()
+        );
     }
 
     #[test]
@@ -158,6 +179,10 @@ mod tests {
         assert!(protected_reason(&h.join("Development/app/node_modules"), Some(&h)).is_none());
         assert!(protected_reason(&h.join(".npm/_cacache"), Some(&h)).is_none());
         assert!(protected_reason(&h.join("Library/Caches/Homebrew"), Some(&h)).is_none());
+        // Package caches this branch adds must stay reclaimable.
+        assert!(protected_reason(&h.join(".nuget/packages"), Some(&h)).is_none());
+        assert!(protected_reason(&h.join(".cache/ccache"), Some(&h)).is_none());
+        assert!(protected_reason(&h.join("AppData/Local/JetBrains"), Some(&h)).is_none());
     }
 
     #[test]

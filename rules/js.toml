@@ -76,6 +76,18 @@ platforms = ["linux"]
 home_path = ".cache/yarn"
 
 [[rule]]
+id = "yarn-cache-windows"
+name = "Yarn cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on yarn install"
+explanation = "Yarn's global package cache; rebuilt on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/Yarn/Cache"
+
+[[rule]]
 id = "pnpm-store"
 name = "pnpm content store"
 category = "Package manager caches"
@@ -100,6 +112,18 @@ platforms = ["linux"]
 home_path = ".local/share/pnpm/store"
 
 [[rule]]
+id = "pnpm-store-windows"
+name = "pnpm content store"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "pnpm install re-downloads on demand"
+explanation = "pnpm's content-addressable store. Projects hard-link into it, so active projects may briefly reinstall after clearing."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/pnpm/store"
+
+[[rule]]
 id = "bun-cache"
 name = "Bun install cache"
 category = "Package manager caches"
@@ -109,3 +133,75 @@ explanation = "Bun's global download cache; rebuilt on demand."
 
 [rule.match]
 home_path = ".bun/install/cache"
+
+[[rule]]
+id = "node-gyp-cache"
+name = "node-gyp headers cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded when building native modules"
+explanation = "Node.js headers node-gyp caches to compile native addons; re-fetched on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/node-gyp"
+
+[[rule]]
+id = "node-gyp-cache-linux"
+name = "node-gyp headers cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded when building native modules"
+explanation = "Node.js headers node-gyp caches to compile native addons; re-fetched on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/node-gyp"
+
+[[rule]]
+id = "node-gyp-cache-windows"
+name = "node-gyp headers cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded when building native modules"
+explanation = "Node.js headers node-gyp caches to compile native addons; re-fetched on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/node-gyp/Cache"
+
+[[rule]]
+id = "electron-cache"
+name = "Electron download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded on the next Electron install"
+explanation = "Prebuilt Electron binaries cached by @electron/get; re-downloaded on demand."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/electron"
+
+[[rule]]
+id = "electron-cache-linux"
+name = "Electron download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded on the next Electron install"
+explanation = "Prebuilt Electron binaries cached by @electron/get; re-downloaded on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/electron"
+
+[[rule]]
+id = "electron-cache-windows"
+name = "Electron download cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "re-downloaded on the next Electron install"
+explanation = "Prebuilt Electron binaries cached by @electron/get; re-downloaded on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/electron/Cache"
