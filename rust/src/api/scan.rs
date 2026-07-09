@@ -154,6 +154,12 @@ pub fn cancel_scan() {
 }
 
 fn to_fs_node(store: &scanner::ScanStore, id: u32) -> FsNode {
+    to_fs_node_with_path(store, id, store.path_of(id).to_string_lossy().into_owned())
+}
+
+/// Like [`to_fs_node`] for callers that already know the node's path, so it
+/// isn't rebuilt by walking parent links.
+fn to_fs_node_with_path(store: &scanner::ScanStore, id: u32, path: String) -> FsNode {
     let node = &store.nodes[id as usize];
     let (rule_id, rule_name, category) = match node.rule {
         Some(r) => {
@@ -169,7 +175,7 @@ fn to_fs_node(store: &scanner::ScanStore, id: u32) -> FsNode {
     FsNode {
         id: id as i64,
         name: node.name.clone(),
-        path: store.path_of(id).to_string_lossy().into_owned(),
+        path,
         kind: match node.kind {
             NodeKind::Dir => FsKind::Dir,
             NodeKind::File => FsKind::File,
@@ -268,20 +274,7 @@ pub fn get_children_sorted(id: i64, key: SortKey, ascending: bool, limit: i64) -
     let Some(node) = store.node(id as u32) else {
         return Vec::new();
     };
-    let mut ids: Vec<u32> = node.children.clone();
-    ids.sort_by(|&a, &b| {
-        let (na, nb) = (&store.nodes[a as usize], &store.nodes[b as usize]);
-        let ord = match key {
-            SortKey::Size => na.size.cmp(&nb.size),
-            SortKey::Name => na.name.to_lowercase().cmp(&nb.name.to_lowercase()),
-            SortKey::Items => (na.file_count + na.dir_count).cmp(&(nb.file_count + nb.dir_count)),
-        };
-        if ascending {
-            ord
-        } else {
-            ord.reverse()
-        }
-    });
+    let ids = sorted_child_ids(store, node, key, ascending);
 
     let limit = limit.max(1) as usize;
     let mut out: Vec<FsNode> = ids
@@ -317,6 +310,48 @@ pub fn get_children_sorted(id: i64, key: SortKey, ascending: bool, limit: i64) -
     out
 }
 
+fn sorted_child_ids(
+    store: &scanner::ScanStore,
+    node: &scanner::Node,
+    key: SortKey,
+    ascending: bool,
+) -> Vec<u32> {
+    let mut ids: Vec<u32> = node.children.clone();
+    if key == SortKey::Name {
+        // Lowercase once per child, not twice per comparison.
+        let mut keyed: Vec<(String, u32)> = ids
+            .iter()
+            .map(|&c| (store.nodes[c as usize].name.to_lowercase(), c))
+            .collect();
+        keyed.sort_by(|a, b| {
+            let ord = a.0.cmp(&b.0);
+            if ascending {
+                ord
+            } else {
+                ord.reverse()
+            }
+        });
+        ids = keyed.into_iter().map(|(_, c)| c).collect();
+    } else {
+        ids.sort_by(|&a, &b| {
+            let (na, nb) = (&store.nodes[a as usize], &store.nodes[b as usize]);
+            let ord = match key {
+                SortKey::Size => na.size.cmp(&nb.size),
+                SortKey::Items => {
+                    (na.file_count + na.dir_count).cmp(&(nb.file_count + nb.dir_count))
+                }
+                SortKey::Name => unreachable!("handled above"),
+            };
+            if ascending {
+                ord
+            } else {
+                ord.reverse()
+            }
+        });
+    }
+    ids
+}
+
 /// Search the whole scan for nodes whose name contains `query`
 /// (case-insensitive), largest first, capped at `limit`. Linear over the flat
 /// arena — cheap even for a home-directory scan. The root and the synthetic
@@ -346,9 +381,7 @@ fn search_hits(store: &scanner::ScanStore, query: &str, limit: usize) -> Vec<u32
         .iter()
         .enumerate()
         .filter(|(i, n)| {
-            *i as u32 != store.root
-                && n.kind != NodeKind::SmallFiles
-                && lower[*i].contains(&needle)
+            *i as u32 != store.root && n.kind != NodeKind::SmallFiles && lower[*i].contains(&needle)
         })
         .map(|(i, _)| i as u32)
         .collect();
@@ -369,14 +402,29 @@ pub fn node_ancestry(id: i64) -> Vec<FsNode> {
     if id < 0 || store.node(id as u32).is_none() {
         return Vec::new();
     }
+    ancestry_nodes(store, id as u32)
+}
+
+fn ancestry_nodes(store: &scanner::ScanStore, id: u32) -> Vec<FsNode> {
     let mut chain = Vec::new();
-    let mut cur = Some(id as u32);
+    let mut cur = Some(id);
     while let Some(i) = cur {
         chain.push(i);
         cur = store.nodes[i as usize].parent;
     }
     chain.reverse();
-    chain.into_iter().map(|i| to_fs_node(store, i)).collect()
+    // Build each ancestor's path by extending the previous one instead of
+    // re-walking parent links per element — O(depth), not O(depth²).
+    let mut path = store.root_path.clone();
+    chain
+        .into_iter()
+        .map(|i| {
+            if store.nodes[i as usize].parent.is_some() {
+                path.push(&store.nodes[i as usize].name);
+            }
+            to_fs_node_with_path(store, i, path.to_string_lossy().into_owned())
+        })
+        .collect()
 }
 
 /// Paths that couldn't be read during the current scan (permission denied or
@@ -471,5 +519,58 @@ mod tests {
         // Second query hits the cached lowercase index; results are identical.
         assert_eq!(search_hits(&store, "ALPHA", 10), hits);
         assert!(search_hits(&store, "  ", 10).is_empty());
+    }
+
+    #[test]
+    fn name_sort_is_case_insensitive_both_ways() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        for name in ["beta.bin", "Alpha.bin", "gamma.bin"] {
+            write_bytes(&root.join(name), 1_100_000);
+        }
+
+        let store = scan_dir(root);
+        let node = store.node(store.root).unwrap();
+        let asc = sorted_child_ids(&store, node, SortKey::Name, true);
+        assert_eq!(
+            names_of(&store, &asc),
+            vec!["Alpha.bin", "beta.bin", "gamma.bin"]
+        );
+        let desc = sorted_child_ids(&store, node, SortKey::Name, false);
+        assert_eq!(
+            names_of(&store, &desc),
+            vec!["gamma.bin", "beta.bin", "Alpha.bin"]
+        );
+    }
+
+    #[test]
+    fn ancestry_paths_match_path_of() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("a/b/c")).unwrap();
+        write_bytes(&root.join("a/b/c/big.bin"), 1_500_000);
+
+        let store = scan_dir(root);
+        let (leaf, _) = store
+            .nodes
+            .iter()
+            .enumerate()
+            .find(|(_, n)| n.name == "big.bin")
+            .expect("deep file present");
+        let chain = ancestry_nodes(&store, leaf as u32);
+        assert_eq!(chain.len(), 5); // root, a, b, c, big.bin
+        let mut cur = Some(leaf as u32);
+        let mut ids = Vec::new();
+        while let Some(i) = cur {
+            ids.push(i);
+            cur = store.nodes[i as usize].parent;
+        }
+        ids.reverse();
+        for (fs_node, id) in chain.iter().zip(ids) {
+            assert_eq!(
+                fs_node.path,
+                store.path_of(id).to_string_lossy().into_owned()
+            );
+        }
     }
 }

@@ -529,7 +529,10 @@ fn finalize(store: &mut ScanStore) {
         if is_protected {
             store.nodes[id as usize].tier = Tier::Protected;
         }
-        for &c in store.nodes[id as usize].children.clone().iter() {
+        // Index-based so the children list isn't cloned per node just to
+        // appease the borrow checker while child tiers are written.
+        for ci in 0..store.nodes[id as usize].children.len() {
+            let c = store.nodes[id as usize].children[ci];
             let child = &store.nodes[c as usize];
             if child.kind == NodeKind::Dir {
                 let child_path = path.join(&child.name);
