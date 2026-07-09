@@ -327,10 +327,20 @@ pub fn search_nodes(query: String, limit: i64) -> Vec<FsNode> {
     let Some(store) = store.as_ref() else {
         return Vec::new();
     };
+    search_hits(store, &query, limit.max(1) as usize)
+        .iter()
+        .map(|&i| to_fs_node(store, i))
+        .collect()
+}
+
+fn search_hits(store: &scanner::ScanStore, query: &str, limit: usize) -> Vec<u32> {
     let needle = query.trim().to_lowercase();
     if needle.is_empty() {
         return Vec::new();
     }
+    let lower = store
+        .lower_names
+        .get_or_init(|| store.nodes.iter().map(|n| n.name.to_lowercase()).collect());
     let mut hits: Vec<u32> = store
         .nodes
         .iter()
@@ -338,13 +348,13 @@ pub fn search_nodes(query: String, limit: i64) -> Vec<FsNode> {
         .filter(|(i, n)| {
             *i as u32 != store.root
                 && n.kind != NodeKind::SmallFiles
-                && n.name.to_lowercase().contains(&needle)
+                && lower[*i].contains(&needle)
         })
         .map(|(i, _)| i as u32)
         .collect();
     hits.sort_by_key(|&i| std::cmp::Reverse(store.nodes[i as usize].size));
-    hits.truncate(limit.max(1) as usize);
-    hits.iter().map(|&i| to_fs_node(store, i)).collect()
+    hits.truncate(limit);
+    hits
 }
 
 /// Ancestry chain from the root down to `id`, inclusive (root first, `id`
@@ -425,4 +435,41 @@ pub fn recent_scan_roots() -> Vec<String> {
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+
+    fn scan_dir(root: &Path) -> scanner::ScanStore {
+        scanner::scan(root, RuleSet::builtin(), &ProgressCounters::default())
+    }
+
+    fn write_bytes(path: &Path, n: usize) {
+        fs::write(path, vec![0u8; n]).unwrap();
+    }
+
+    fn names_of(store: &scanner::ScanStore, ids: &[u32]) -> Vec<String> {
+        ids.iter()
+            .map(|&i| store.nodes[i as usize].name.clone())
+            .collect()
+    }
+
+    #[test]
+    fn search_matches_case_insensitively_largest_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir(root.join("Alpha")).unwrap();
+        write_bytes(&root.join("Alpha/big.bin"), 3_000_000);
+        write_bytes(&root.join("alphabet.bin"), 2_000_000);
+
+        let store = scan_dir(root);
+        let hits = search_hits(&store, "ALPHA", 10);
+        assert_eq!(names_of(&store, &hits), vec!["Alpha", "alphabet.bin"]);
+        // Second query hits the cached lowercase index; results are identical.
+        assert_eq!(search_hits(&store, "ALPHA", 10), hits);
+        assert!(search_hits(&store, "  ", 10).is_empty());
+    }
 }
