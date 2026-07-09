@@ -72,6 +72,7 @@ jobs:
     name: Build Linux (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-latest
@@ -94,16 +95,26 @@ jobs:
       - name: Linux desktop dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libgtk-3-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
       - uses: subosito/flutter-action@v2
+        if: matrix.arch == 'x64'
         with:
           channel: stable
           cache: true
+      # Flutter publishes no arm64 SDK archives for Linux/Windows, so
+      # flutter-action can't install there. A git clone of the stable branch
+      # bootstraps a native arm64 Dart SDK on first run instead.
+      - name: Install Flutter from git (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
 
       - run: flutter pub get
       - run: flutter build linux --release
@@ -128,6 +139,7 @@ jobs:
     name: Build Windows (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: windows-latest
@@ -152,9 +164,18 @@ jobs:
         with:
           workspaces: rust
       - uses: subosito/flutter-action@v2
+        if: matrix.arch == 'x64'
         with:
           channel: stable
           cache: true
+      # Same story as Linux: no arm64 SDK archive, so install from git.
+      - name: Install Flutter from git (arm64)
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$env:RUNNER_TEMP\flutter"
+          Add-Content $env:GITHUB_PATH "$env:RUNNER_TEMP\flutter\bin"
+          & "$env:RUNNER_TEMP\flutter\bin\flutter.bat" --version
 
       - run: flutter pub get
       - run: flutter build windows --release
