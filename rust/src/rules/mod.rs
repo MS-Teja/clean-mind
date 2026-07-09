@@ -93,11 +93,28 @@ impl RuleSet {
 
     /// Match a directory by name against its siblings (the other entries of
     /// the parent directory). Returns the first applicable rule index.
-    pub fn match_dir(&self, dir_name: &str, siblings: &HashSet<String>) -> Option<u16> {
+    /// Generic over owned or borrowed sibling names so the scanner can pass a
+    /// zero-copy `HashSet<&str>`.
+    pub fn match_dir<S>(&self, dir_name: &str, siblings: &HashSet<S>) -> Option<u16>
+    where
+        S: std::borrow::Borrow<str> + std::hash::Hash + Eq,
+    {
         let candidates = self.by_dir_name.get(dir_name)?;
         candidates.iter().copied().find(|&i| {
             let spec = &self.rules[i as usize].matcher;
-            spec.siblings.is_empty() || spec.siblings.iter().any(|s| siblings.contains(s))
+            spec.siblings.is_empty() || spec.siblings.iter().any(|s| siblings.contains(s.as_str()))
+        })
+    }
+
+    /// Whether matching `dir_name` could require sibling names at all — true
+    /// only when it's a rule candidate with a non-empty sibling requirement.
+    /// Lets the scanner skip collecting sibling names for the vast majority
+    /// of directories.
+    pub fn needs_sibling_check(&self, dir_name: &str) -> bool {
+        self.by_dir_name.get(dir_name).is_some_and(|candidates| {
+            candidates
+                .iter()
+                .any(|&i| !self.rules[i as usize].matcher.siblings.is_empty())
         })
     }
 
