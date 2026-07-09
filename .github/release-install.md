@@ -15,7 +15,7 @@ This free app is not notarized (there is no paid Apple Developer account behind 
 ### Linux
 On Debian/Ubuntu/Kali/Pop!_OS/Mint, grab the `.deb` for your CPU — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, Apple-silicon VMs) — and install it system-wide:
 ```
-sudo apt install ./clean-mind_1.1.0_amd64.deb
+sudo apt install ./clean-mind_<version>_amd64.deb
 ```
 This adds a launcher entry and a `clean-mind` command. Requires GTK 3 (pulled in automatically).
 
