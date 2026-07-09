@@ -56,15 +56,15 @@ stays truthful.
    they regenerate.
 4. **Clean** — one-click reclaim to the Trash; nothing is ever deleted automatically.
 
-### 4. Feature grid (6 cards — pull from README "Why Clean Mind")
-- 🗺️ A treemap that makes sense
-- 🧠 It knows developer junk (with the regenerate command)
-- ✅ Safe by construction (three tiers + hard denylist + Trash-first)
+### 4. Feature grid (6 cards — pull from README; privacy leads)
+- 🔒 Private by design (offline, no telemetry, no account; scan results only in memory)
 - 🤖 AI on your terms (BYO key or local Ollama; metadata only; optional
   pseudonymization replaces personal folder names with `dir-1`, `dir-2`, …
   before anything leaves the machine)
-- 🔒 Private and offline by default
-- ⚡ Native and fast (parallel Rust, seconds, low memory, no Electron)
+- 🧠 It knows developer junk (with the regenerate command)
+- ✅ Safe by construction (three tiers + hard denylist + Trash-first)
+- 💻 One native app on macOS, Linux, and Windows — x64 and arm64, all first-class
+- ⚡ Native and fast (parallel Rust, 1.2M files ≈ 8 s, low memory, no Electron)
 
 ### 5. The trust model (short, builds confidence)
 Three tiers: **Safe · regenerable** (rules-verified, one-click) → **Review**
@@ -84,9 +84,13 @@ One native app on macOS, Linux, and Windows — each using the right OS conventi
 
 ### 8. Install
 - macOS (Homebrew, recommended): `brew install --cask MS-Teja/clean-mind/clean-mind`
-- macOS (universal DMG — Apple silicon + Intel), Linux (x64 + arm64 tarballs +
-  `install.sh`), Windows (x64 + arm64 zips) — link to the release.
-- Note the unsigned-app first-launch step for the DMG (right-click → Open).
+- Windows (Scoop, recommended): `scoop bucket add clean-mind
+  https://github.com/MS-Teja/scoop-clean-mind` then `scoop install clean-mind`
+- Linux: `.deb` for Debian/Ubuntu/Kali/Mint (amd64 + arm64), tarball +
+  `install.sh` for everything else
+- Manual fallbacks: universal DMG (Apple silicon + Intel), x64/arm64 zips —
+  link to the release. Note the unsigned-app first-launch step for the DMG
+  (right-click → Open).
 
 ### 9. Open source / footer
 - Apache-2.0, built by Siva Teja Mutyala.
