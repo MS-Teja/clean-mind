@@ -235,6 +235,14 @@ class _LandingView extends ConsumerWidget {
                   label: const Text('Scan'),
                 ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'or drag and drop a folder anywhere in this window',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: 18),
               Text(
                 'Nothing leaves your machine — even optional AI analysis '
@@ -264,25 +272,38 @@ class _ScanTargetCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final root = ref.watch(scanRootProvider);
     return SizedBox(
       width: double.infinity,
       child: GlassPanel(
-        padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                const IconTile(icon: Icons.folder_rounded, size: 34),
-                const SizedBox(width: 14),
+                const IconTile(icon: Icons.folder_rounded, size: 36),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    root,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: mono(12.5, color: scheme.onSurface),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _labelFor(root),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        root,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(11, color: scheme.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -300,15 +321,28 @@ class _ScanTargetCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Divider(height: 1, color: scheme.outlineVariant),
-            const SizedBox(height: 10),
-            const _LocationChips(),
             _DiskSpaceLine(root: root),
+            const SizedBox(height: 14),
+            Divider(height: 1, color: scheme.outlineVariant),
+            const SizedBox(height: 12),
+            const _LocationGrid(),
           ],
         ),
       ),
     );
+  }
+
+  /// Friendly name for the target: a known location's label, "Entire disk"
+  /// for the filesystem root, otherwise the folder's own name.
+  static String _labelFor(String root) {
+    if (root == diskRootPath) return 'Entire disk';
+    for (final loc in standardLocations()) {
+      if (loc.path == root) return loc.label;
+    }
+    final parts = root
+        .split(Platform.pathSeparator)
+        .where((p) => p.isNotEmpty);
+    return parts.isEmpty ? root : parts.last;
   }
 }
 
@@ -427,33 +461,52 @@ class _FullDiskAccessHint extends StatelessWidget {
   }
 }
 
-/// Smart locations (Home, Desktop, Documents, Downloads, Applications, mounted
-/// volumes) plus "Entire disk", built from the platform's real directories.
-class _LocationChips extends ConsumerWidget {
-  const _LocationChips();
+/// The handful of places people actually start a cleanup from — Home,
+/// Downloads, Applications, and the whole disk — as one row of uniform tiles.
+/// Everything else is one Change click or a drag-and-drop away; listing every
+/// folder and mounted volume here crowded the card without helping.
+class _LocationGrid extends ConsumerWidget {
+  const _LocationGrid();
+
+  static const _quickPicks = {'home', 'downloads', 'applications'};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locations = standardLocations()
-        .where((l) => l.exists)
+        .where((l) => l.exists && _quickPicks.contains(l.kind))
         .toList(growable: false);
-    return Wrap(
-      alignment: WrapAlignment.start,
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (final loc in locations)
-          _PresetChip(
-            icon: _iconForKind(loc.kind),
-            label: loc.label,
-            path: loc.path,
-          ),
-        _PresetChip(
-          icon: Icons.storage_rounded,
-          label: 'Entire disk',
-          path: diskRootPath,
-        ),
-      ],
+    final count = locations.length + 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        // 2x2 when all four picks exist (labels get room); one row otherwise.
+        final columns = count >= 4 ? 2 : count.clamp(1, 3);
+        final tileWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final loc in locations)
+              SizedBox(
+                width: tileWidth,
+                child: _LocationTile(
+                  icon: _iconForKind(loc.kind),
+                  label: loc.label,
+                  path: loc.path,
+                ),
+              ),
+            SizedBox(
+              width: tileWidth,
+              child: _LocationTile(
+                icon: Icons.storage_rounded,
+                label: 'Entire disk',
+                path: diskRootPath,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -478,8 +531,8 @@ IconData _iconForKind(String kind) {
 }
 
 /// Quick-pick scan root: highlighted when it is the current root.
-class _PresetChip extends ConsumerWidget {
-  const _PresetChip({
+class _LocationTile extends ConsumerWidget {
+  const _LocationTile({
     required this.icon,
     required this.label,
     required this.path,
@@ -495,34 +548,45 @@ class _PresetChip extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final selected = ref.watch(scanRootProvider) == path;
     final fg = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+      side: selected
+          ? BorderSide(color: scheme.primary.withValues(alpha: 0.45))
+          : BorderSide.none,
+    );
 
     return Material(
       color: Colors.transparent,
-      shape: const StadiumBorder(),
+      shape: shape,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => ref.read(scanRootProvider.notifier).set(path),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: ShapeDecoration(
             // Quiet by default; only the selected pick draws attention.
             color: selected
-                ? scheme.primary.withValues(alpha: 0.14)
-                : scheme.onSurface.withValues(alpha: 0.05),
-            shape: StadiumBorder(
-              side: selected
-                  ? BorderSide(color: scheme.primary.withValues(alpha: 0.5))
-                  : BorderSide.none,
-            ),
+                ? scheme.primary.withValues(alpha: 0.12)
+                : scheme.onSurface.withValues(alpha: 0.04),
+            shape: shape,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 13, color: fg),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(color: fg),
+              Icon(icon, size: 15, color: fg),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: fg,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
