@@ -25,7 +25,10 @@ final reclaimableTotalProvider = Provider<int>((ref) {
 /// Bytes of not-yet-reclaimed Tier-1 items living *under* the given path
 /// (exclusive). Lets the treemap show "65 MB reclaimable inside" on a plain
 /// folder whose subtree contains flagged items.
-final reclaimableUnderProvider = Provider.family<int, String>((ref, path) {
+final reclaimableUnderProvider = Provider.autoDispose.family<int, String>((
+  ref,
+  path,
+) {
   final deleted = ref.watch(deletedIdsProvider);
   final prefix = path.endsWith('/') ? path : '$path/';
   return ref

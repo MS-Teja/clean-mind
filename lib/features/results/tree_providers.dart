@@ -101,7 +101,10 @@ final focusNodeProvider = Provider<FsNode?>((ref) {
 });
 
 /// Children of a node, largest first, bounded with a trailing Rest aggregate.
-final childrenProvider = Provider.family<List<FsNode>, int>((ref, id) {
+final childrenProvider = Provider.autoDispose.family<List<FsNode>, int>((
+  ref,
+  id,
+) {
   // Recompute when the scan changes.
   ref.watch(scanControllerProvider);
   return getChildren(id: id, limit: treemapChildLimit);
