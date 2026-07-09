@@ -22,6 +22,27 @@ final reclaimableTotalProvider = Provider<int>((ref) {
       .fold(0, (sum, i) => sum + i.size);
 });
 
+/// Not-yet-reclaimed Tier-1 bytes, indexed by every ancestor path prefix of
+/// each qualifying insight (built once per insights/deleted change, instead
+/// of re-scanning all insights per tile). An insight at `a/b/c/d` adds its
+/// size under `a/b/c`, `a/b`, and `a` — never under `a/b/c/d` itself, which
+/// matches the strict-descendant semantics of the prior `startsWith` scan.
+final reclaimableIndexProvider = Provider<Map<String, int>>((ref) {
+  final deleted = ref.watch(deletedIdsProvider);
+  final index = <String, int>{};
+  for (final i in ref.watch(insightsProvider)) {
+    if (i.tier != FsTier.safe || deleted.contains(i.nodeId)) continue;
+    var p = i.path;
+    while (true) {
+      final slash = p.lastIndexOf('/');
+      if (slash <= 0) break;
+      p = p.substring(0, slash);
+      index[p] = (index[p] ?? 0) + i.size;
+    }
+  }
+  return index;
+});
+
 /// Bytes of not-yet-reclaimed Tier-1 items living *under* the given path
 /// (exclusive). Lets the treemap show "65 MB reclaimable inside" on a plain
 /// folder whose subtree contains flagged items.
@@ -29,15 +50,7 @@ final reclaimableUnderProvider = Provider.autoDispose.family<int, String>((
   ref,
   path,
 ) {
-  final deleted = ref.watch(deletedIdsProvider);
-  final prefix = path.endsWith('/') ? path : '$path/';
-  return ref
-      .watch(insightsProvider)
-      .where((i) =>
-          i.tier == FsTier.safe &&
-          !deleted.contains(i.nodeId) &&
-          i.path.startsWith(prefix))
-      .fold(0, (sum, i) => sum + i.size);
+  return ref.watch(reclaimableIndexProvider)[path] ?? 0;
 });
 
 /// Node ids ticked in the insights sheet.
