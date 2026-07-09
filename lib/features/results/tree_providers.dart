@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
@@ -160,13 +162,24 @@ class ResultsViewController extends Notifier<ResultsView> {
 
 /// Whole-scan search query (empty = not searching). Cleared on a new scan.
 class SearchQueryController extends Notifier<String> {
+  Timer? _debounce;
+
   @override
   String build() {
     ref.watch(scanControllerProvider);
+    ref.onDispose(() => _debounce?.cancel());
     return '';
   }
 
-  void set(String q) => state = q;
+  void set(String q) {
+    _debounce?.cancel();
+    if (q.isEmpty) {
+      // Clearing is instant — no need to wait out the debounce.
+      state = q;
+    } else {
+      _debounce = Timer(const Duration(milliseconds: 180), () => state = q);
+    }
+  }
 }
 
 final searchQueryProvider = NotifierProvider<SearchQueryController, String>(
