@@ -135,6 +135,64 @@ jobs:
           name: linux-tarball-${{ matrix.arch }}
           path: CleanMind-*-linux-*.tar.gz
 
+      - name: Package Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.arch }}" in
+            x64) DEB_ARCH=amd64 ;;
+            arm64) DEB_ARCH=arm64 ;;
+            *) echo "::error::unknown arch ${{ matrix.arch }}"; exit 1 ;;
+          esac
+          desktop_id="io.github.msteja.cleanmind"
+
+          root="debroot"
+          mkdir -p "$root/opt/clean-mind" \
+                   "$root/usr/bin" \
+                   "$root/usr/share/applications" \
+                   "$root/usr/share/icons/hicolor/512x512/apps" \
+                   "$root/DEBIAN"
+
+          cp -R "build/linux/${{ matrix.arch }}/release/bundle/." "$root/opt/clean-mind/"
+          ln -s /opt/clean-mind/clean_mind "$root/usr/bin/clean-mind"
+          cp packaging/linux/io.github.msteja.cleanmind.png \
+            "$root/usr/share/icons/hicolor/512x512/apps/$desktop_id.png"
+
+          # The tarball's desktop file relies on install.sh rewriting Exec= to
+          # an absolute path; a .deb has a fixed install location, so bake
+          # the real one in here instead of reusing that file verbatim.
+          sed "s|^Exec=.*|Exec=/opt/clean-mind/clean_mind|" \
+            packaging/linux/io.github.msteja.cleanmind.desktop \
+            > "$root/usr/share/applications/$desktop_id.desktop"
+
+          installed_size="$(du -sk "$root" | cut -f1)"
+          # Written with printf (not a heredoc) so the YAML block's own
+          # indentation can't leak into the control file: dpkg requires
+          # fields to start at column 0 and continuation lines to start
+          # with exactly one space.
+          {
+            printf 'Package: clean-mind\n'
+            printf 'Version: %s\n' "${VERSION}"
+            printf 'Section: utils\n'
+            printf 'Priority: optional\n'
+            printf 'Architecture: %s\n' "${DEB_ARCH}"
+            printf 'Maintainer: Siva Teja Mutyala <sivatejamutyala@gmail.com>\n'
+            printf 'Installed-Size: %s\n' "${installed_size}"
+            printf 'Depends: libgtk-3-0\n'
+            printf 'Description: Disk usage analyzer that understands developer bloat\n'
+            printf ' Clean Mind scans folders and disks, visualizes usage as an\n'
+            printf ' interactive treemap, and flags regenerable developer clutter\n'
+            printf ' (build artifacts, caches, dependency directories) that is safe\n'
+            printf ' to reclaim.\n'
+          } > "$root/DEBIAN/control"
+
+          dpkg-deb --build --root-owner-group "$root" "clean-mind_${VERSION}_${DEB_ARCH}.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb-${{ matrix.arch }}
+          path: clean-mind_*_*.deb
+
   build-windows:
     name: Build Windows (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}

@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: MS-Teja.CleanMind
+PackageVersion: 1.1.0
+Platform:
+  - Windows.Desktop
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: clean_mind.exe
+    PortableCommandAlias: clean-mind
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.1.0/CleanMind-1.1.0-windows-x64.zip
+    InstallerSha256: 560EF81008734795F060A9695478D5F867B2732780A42A0224A5017994D03539
+  - Architecture: arm64
+    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.1.0/CleanMind-1.1.0-windows-arm64.zip
+    InstallerSha256: 2B66086F91167EF418D7164E68242013F0061D0DA29B94837C77B22AC4C50F16
+ManifestType: installer
+ManifestVersion: 1.6.0

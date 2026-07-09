@@ -12,10 +12,21 @@ This free app is not notarized (there is no paid Apple Developer account behind 
 - **macOS 14 and earlier:** right-click the app in Applications and choose **Open**, then **Open** again.
 - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
 
-### Linux (experimental)
-Pick the tarball for your CPU — `linux-x64` (Intel/AMD) or `linux-arm64` (Raspberry Pi 5, Ampere, Apple-silicon VMs). Extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
+### Linux
+On Debian/Ubuntu/Kali/Pop!_OS/Mint, grab the `.deb` for your CPU — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, Apple-silicon VMs) — and install it system-wide:
+```
+sudo apt install ./clean-mind_1.1.0_amd64.deb
+```
+This adds a launcher entry and a `clean-mind` command. Requires GTK 3 (pulled in automatically).
 
-### Windows (experimental)
-Pick the zip for your CPU — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs). Extract it and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+No root, or not on a Debian-based distro? Download the `linux-x64`/`linux-arm64` tarball instead, extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed).
 
-Linux and Windows builds compile and pass tests in CI but have had less real-world testing than macOS — issue reports are very welcome.
+### Windows
+Easiest via [Scoop](https://scoop.sh):
+```
+scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
+scoop install clean-mind
+```
+Or pick the zip for your CPU — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs) — extract it, and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+
+Issue reports for Linux and Windows are very welcome.
