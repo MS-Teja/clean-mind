@@ -1885,6 +1885,7 @@ dependencies = [
  "dirs",
  "flutter_rust_bridge",
  "keyring",
+ "libc",
  "rayon",
  "reqwest",
  "serde",
@@ -1892,6 +1893,7 @@ dependencies = [
  "tempfile",
  "toml",
  "trash",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

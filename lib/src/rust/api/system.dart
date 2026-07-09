@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `fetch_latest_release`, `is_newer`, `mounted_volumes`, `push_dir`, `read_volume_dir`
+// These functions are ignored because they are not marked as `pub`: `fetch_latest_release`, `is_newer`, `mounted_volumes`, `push_dir`, `read_volume_dir`, `volume_space`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`
 
 /// Standard scan locations plus mounted volumes, for the landing screen. Each
@@ -38,12 +38,38 @@ UiPrefs getUiPrefs() => RustLib.instance.api.crateApiSystemGetUiPrefs();
 void setUiPrefs({required UiPrefs prefs}) =>
     RustLib.instance.api.crateApiSystemSetUiPrefs(prefs: prefs);
 
+/// Capacity and free space of the volume containing `path`, or None if the
+/// path doesn't resolve to a mounted filesystem.
+DiskSpace? diskSpace({required String path}) =>
+    RustLib.instance.api.crateApiSystemDiskSpace(path: path);
+
 /// Ask GitHub for the latest published release. Only ever called from an
 /// explicit "Check for updates" action — nothing phones home on its own.
 Future<UpdateCheck> checkForUpdate({required String currentVersion}) => RustLib
     .instance
     .api
     .crateApiSystemCheckForUpdate(currentVersion: currentVersion);
+
+class DiskSpace {
+  /// Capacity of the volume holding the queried path, in bytes.
+  final PlatformInt64 totalBytes;
+
+  /// Bytes available to the current user on that volume.
+  final PlatformInt64 freeBytes;
+
+  const DiskSpace({required this.totalBytes, required this.freeBytes});
+
+  @override
+  int get hashCode => totalBytes.hashCode ^ freeBytes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DiskSpace &&
+          runtimeType == other.runtimeType &&
+          totalBytes == other.totalBytes &&
+          freeBytes == other.freeBytes;
+}
 
 /// Whether the app can read macOS TCC-protected locations (Mail, Safari,
 /// Messages, …). Without Full Disk Access those directories fail with

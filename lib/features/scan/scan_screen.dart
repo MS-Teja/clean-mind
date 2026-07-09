@@ -304,8 +304,57 @@ class _ScanTargetCard extends ConsumerWidget {
             Divider(height: 1, color: scheme.outlineVariant),
             const SizedBox(height: 10),
             const _LocationChips(),
+            _DiskSpaceLine(root: root),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One quiet line of context under the quick picks: how full the volume
+/// holding the current target is, and how much is left.
+class _DiskSpaceLine extends ConsumerWidget {
+  const _DiskSpaceLine({required this.root});
+
+  final String root;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final space = ref.watch(diskSpaceProvider(root));
+    if (space == null || space.totalBytes <= 0) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final used = (space.totalBytes - space.freeBytes).clamp(0, space.totalBytes);
+    final fraction = used / space.totalBytes;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: SizedBox(
+                height: 4,
+                child: LinearProgressIndicator(
+                  value: fraction,
+                  backgroundColor: scheme.onSurface.withValues(alpha: 0.06),
+                  valueColor: AlwaysStoppedAnimation(
+                    scheme.primary.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '${formatBytes(space.freeBytes)} free of '
+            '${formatBytes(space.totalBytes)}',
+            style: theme.textTheme.labelSmall?.copyWith(color: scheme.outline),
+          ),
+        ],
       ),
     );
   }
