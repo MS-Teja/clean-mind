@@ -10,35 +10,50 @@
 [![Latest release](https://img.shields.io/github/v/release/MS-Teja/clean-mind?include_prereleases)](https://github.com/MS-Teja/clean-mind/releases/latest)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+**Private by design · Knows what's safe · Native on every desktop**
+
 ```sh
 brew install --cask MS-Teja/clean-mind/clean-mind
 ```
 
-<sub>macOS · [Linux and Windows builds](#install) on the releases page</sub>
+<sub>macOS · [Windows and Linux installs](#install) below</sub>
 
 </div>
 
-Clean Mind is an open-source, cross-platform (macOS · Linux · Windows) disk usage analyzer in the spirit of OmniDiskSweeper and DaisyDisk, built for developers. Beyond showing *what* takes space, it identifies developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and classifies everything by **regenerability**, optionally with help from an LLM you control.
+Clean Mind is an open-source disk usage analyzer built for developers, in the spirit of OmniDiskSweeper and DaisyDisk — except it doesn't stop at showing *what* takes space. It recognizes developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and shows the exact command that brings it back. The agentic-coding era makes this matter more than ever: spin up a few throwaway repos a day with a coding agent and you accumulate `node_modules`, build caches, and `.venv`s faster than you can track them. Almost all of it is regenerable; the hard part is knowing which.
 
-The agentic/vibe-coding era makes this worse than ever: spin up a handful of throwaway repos a day with a coding agent and you accumulate `node_modules`, build caches, and `.venv`s faster than you can track them — almost all of it regenerable. Clean Mind is built to find exactly that and tell you what's safe to reclaim.
+## 🔒 Your disk is your business
 
-> The full loop works end to end — scan → interactive treemap → tiered
-> insights → move-to-Trash, with an optional bring-your-own-LLM analysis pass.
-> macOS is the primary platform; Linux and Windows builds are experimental.
-> See [CONTRIBUTING.md](CONTRIBUTING.md) to add cleanup rules.
+Privacy isn't a settings toggle here — it's the architecture:
+
+- **Everything runs on your machine.** No telemetry, no account, no bundled inference, no background service. Scan results live only in memory; nothing is cached to disk.
+- **AI is strictly opt-in, and it's *your* AI.** Bring your own Anthropic or OpenAI-compatible key, or run fully local with Ollama. It only ever sees directory *metadata* — names, sizes, ages — never file contents.
+- **Pseudonymization goes further:** turn it on and the model doesn't even learn your folder names. Personal names become `dir-1`, `dir-2`, … before anything leaves your machine (structural names like `node_modules` stay readable so the analysis still works), and answers are mapped back to your real folders locally.
+- **API keys live in the operating system keychain** — never in config files.
 
 ![Clean Mind in action: scan, treemap, insights, move to Trash](docs/demo.gif)
 
-## Why Clean Mind
+## 🧠 It knows what's safe — and tells you why
 
-- 🗺️ **A treemap that makes sense** — a squarified, drill-down map of your disk with breadcrumbs and tier-colored badges, so the biggest space hogs are the biggest tiles.
-- 🧠 **It knows developer junk** — a deterministic rules engine recognizes `node_modules`, cargo `target/`, Xcode DerivedData, package-manager caches, build artifacts and more across six ecosystems, and tells you *how* each one regenerates.
-- ✅ **Safe by construction** — a three-tier model, a hard denylist nothing can override, and Trash-first deletion. Permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
-- 🤖 **AI on your terms** — bring your own Anthropic or OpenAI-compatible key, or run a fully local model via Ollama. The AI only ever sees directory *metadata*, never file contents, and can never promote something to "safe" on its own. An optional pseudonymization mode even hides your folder names — the model sees `dir-1`, `dir-2`, … while `node_modules` and friends stay readable.
-- 🔒 **Private and offline by default** — no telemetry, no account, no bundled inference. Fresh scan each launch; nothing cached, nothing runs in the background.
-- ⚡ **Native and fast** — a parallel Rust core (rayon work-stealing across all your cores) walks a home directory of hundreds of thousands of files in seconds, measures true on-disk size (hardlink- and APFS-clone-aware), stays safe on pathologically deep trees, and keeps the UI smooth by folding tiny files and streaming progress. No Electron, no background daemon, low memory.
-- 💻 **Truly cross-platform** — one Rust core and one Flutter UI ship a native app on **macOS, Linux, and Windows**, each using the right OS conventions (Trash vs Recycle Bin, per-platform volumes, long-path support on Windows).
-- 🧭 **Made to explore** — drag a folder in to scan it, search the whole scan by name, switch between the treemap and a sortable list, and move back/forward through folders you've visited.
+Every "cleaner" shows you where the space went, then leaves you to guess whether deleting a folder will wreck a project. Clean Mind's deterministic rules engine recognizes `node_modules`, cargo `target/`, Xcode DerivedData, package-manager caches, and more across every major ecosystem — on macOS, Linux, and Windows alike — and for each one explains why it's safe and prints the command that regenerates it.
+
+The trust model has three tiers, and the LLM is never trusted on its own:
+
+1. **Safe · regenerable** — confirmed by the rules engine (e.g. `node_modules` next to a `package.json`). One-click reclaim.
+2. **Review** — AI suggestions no rule verifies. Always shown with reasoning, never one-click.
+3. **Protected** — a hard denylist (documents, photos, `.ssh`, system paths…) that neither rules nor AI can override.
+
+Deletions go to the OS Trash and are recoverable; permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
+
+## ⚡ Native on every desktop
+
+One parallel Rust core and one Flutter UI ship a real desktop app — not a web view — on **macOS, Linux, and Windows**, x64 and arm64 alike:
+
+- The rayon-powered scanner walks over a million files in seconds, measures true on-disk size (hardlink- and APFS-clone-aware), and streams progress live.
+- Small install (~60 MB), low memory, zero idle cost: no Electron, no daemon.
+- Each platform gets its own conventions: Trash vs Recycle Bin, per-platform volumes, long-path support on Windows, native installs via Homebrew, Scoop, or `apt`.
+
+And the explorer you'd expect around it: a squarified drill-down treemap, a sortable list view, whole-scan search, back/forward navigation, and drag-and-drop any folder to scan it.
 
 ## Screenshots
 
@@ -50,51 +65,52 @@ The insights panel groups reclaimable items and, for each one, explains *why* it
 
 ![Clean Mind's insights panel explaining each reclaimable item](docs/screenshot-insights.png)
 
-<sub>Screenshots and the demo are captured on macOS; the same UI runs natively on Linux and Windows.</sub>
-
-## Performance
-
-Clean Mind is built to feel instant. The scanner is a parallel Rust walk on a rayon work-stealing pool, so it uses every core; a full home directory (hundreds of thousands of files) typically finishes in a few seconds. It measures **actual on-disk usage** (`st_blocks` on Unix), dedupes hardlinks by `(device, inode)`, and is APFS-clone-aware, so the numbers match what the OS reports rather than inflated logical sizes. Files below a threshold are folded into one node per directory so the tree stays small and the treemap renders smoothly even on huge folders, and progress streams live during the scan. It's a native binary — no Electron, no bundled runtime, no background service — so idle cost is zero and memory stays low.
+<sub>Captured on macOS; the same UI runs natively on Linux and Windows.</sub>
 
 ## How it works
 
-- **Scan** — a fast parallel Rust scanner walks your home directory (or any path you choose — pick a smart location, or just drag a folder onto the window) and builds a size map. Fresh scan every launch; nothing is cached, nothing runs in the background.
-- **Understand** — an interactive treemap shows where the space went, with a sortable list view as an alternative; search the whole scan by name, and move back/forward through folders as you drill in.
-- **Classify** — a deterministic rules engine recognizes known developer artifacts (`node_modules`, cargo `target/`, Xcode DerivedData, Docker images, package-manager caches, …) and marks them by how safely they regenerate.
-- **Ask** — optionally, an aggregated view of your largest directories (metadata only, never file contents) is sent to an LLM *you* configure — your own Anthropic/OpenAI-compatible API key, or a fully local model via Ollama — which explains what can go and why.
-- **Clean** — deletions go to the OS Trash (Recycle Bin on Windows) by default and are recoverable. Permanent deletion exists only behind an explicit confirmation.
-
-### Trust model
-
-The LLM is never trusted on its own:
-
-1. **Safe · regenerable** — only items *confirmed by the rules engine* (e.g. `node_modules` next to a `package.json`). One-click reclaim.
-2. **Review** — LLM suggestions that no rule verifies. Always shown with reasoning, never one-click.
-3. **Protected** — a hard-coded denylist (documents, photos, `.ssh`, system paths…) that neither rules nor the LLM can override.
+- **Scan** — a fast parallel Rust scanner walks your home directory (or any path — pick a smart location, or drag a folder onto the window). Fresh scan every launch.
+- **Understand** — an interactive treemap or sortable list shows where the space went; search the whole scan by name.
+- **Classify** — the rules engine marks known developer artifacts by how safely they regenerate.
+- **Ask** *(optional)* — an aggregated, metadata-only view of your largest directories goes to the LLM *you* configure, which explains what can go and why.
+- **Clean** — reclaim to the Trash with one click; restore from there if you ever change your mind.
 
 ## Install
 
 Grab the build for your platform from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest).
 
-**macOS (Homebrew, recommended)** — installs and opens like any other app, no Gatekeeper hoops:
+**macOS — Homebrew (recommended):**
 
 ```sh
 brew install --cask MS-Teja/clean-mind/clean-mind
 ```
 
-**macOS (DMG)** — open the DMG and drag **Clean Mind** to Applications. One universal DMG covers both Apple silicon and Intel Macs. The app is not notarized (this is a free app with no paid Apple Developer account behind it), so the first launch needs one extra step:
+Or download the universal DMG (Apple silicon + Intel) and drag **Clean Mind** to Applications. The app is not notarized (a free app with no paid Apple Developer account behind it), so the first launch needs one extra step: *macOS 15+*: open once, then **System Settings → Privacy & Security → Open Anyway**; *macOS 14 and earlier*: right-click → **Open** → **Open**. Or: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`.
 
-- *macOS 15 and later:* open the app once (it will be blocked), then **System Settings → Privacy & Security → Open Anyway**.
-- *macOS 14 and earlier:* right-click the app → **Open** → **Open**.
-- Or from a terminal: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
+On first scan, macOS asks for access to folders like Documents and Desktop — normal per-folder prompts. For complete results, grant **Full Disk Access**; the app detects when it's missing and links to the right settings pane.
 
-On first scan, macOS will ask for access to folders like Documents and Desktop — that's the normal per-folder permission prompt. For complete results (Mail, Safari, and other protected data), grant **Full Disk Access**; the app detects when it's missing and offers a shortcut to the right settings pane.
+**Windows — Scoop (recommended):**
 
-**Linux** *(experimental)* — pick the tarball for your CPU (`linux-x64` for Intel/AMD, `linux-arm64` for Raspberry Pi 5, Ampere, and other Arm machines), extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed). Requires GTK 3.
+```sh
+scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
+scoop install clean-mind
+```
 
-**Windows** *(experimental)* — pick the zip for your CPU (`windows-x64` for Intel/AMD, `windows-arm64` for Snapdragon X and other Arm PCs), extract it, and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
+Or download the zip for your CPU (`windows-x64` for Intel/AMD, `windows-arm64` for Snapdragon X and other Arm PCs), extract, and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
 
-The Linux and Windows builds compile and pass tests in CI but have seen less real-world use than macOS — issue reports are very welcome.
+**Linux — Debian/Ubuntu/Kali/Mint:**
+
+```sh
+sudo apt install ./clean-mind_<version>_amd64.deb   # or _arm64.deb
+```
+
+Other distros: grab the tarball for your CPU (`linux-x64`, or `linux-arm64` for Raspberry Pi 5, Ampere, and Arm laptops), extract, and either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root). Requires GTK 3.
+
+All three platforms are tested and supported — bug reports are welcome everywhere, and especially appreciated from less common setups.
+
+## Performance
+
+Clean Mind is built to feel instant. The scanner is a parallel Rust walk on a rayon work-stealing pool: a home directory with **1.2 million files scans in about 8 seconds** on an Apple-silicon laptop, using every core. It measures **actual on-disk usage** (`st_blocks` on Unix), dedupes hardlinks by `(device, inode)`, and is APFS-clone-aware, so numbers match what the OS reports. Tiny files fold into one node per directory so the treemap stays smooth on huge folders. It's a native binary — idle cost is zero, and memory stays modest even with a million-file tree loaded.
 
 ## Stack
 
@@ -123,22 +139,6 @@ Regenerate the bridge after changing `rust/src/api/`:
 cargo install flutter_rust_bridge_codegen
 flutter_rust_bridge_codegen generate
 ```
-
-## Privacy
-
-- No telemetry, no accounts, no bundled inference.
-- The AI layer is opt-in, and only ever sends directory **metadata** (paths, sizes, timestamps) — never file contents.
-- An optional pseudonymization mode strips identity from what the AI sees: personal folder names are replaced with placeholders (`dir-1`, `dir-2`, …) before anything leaves your machine, while structural names like `node_modules` stay readable so the analysis still works. The AI's answers are mapped back to your real folders locally.
-- API keys are stored in the operating system keychain, not in config files.
-
-## Project status
-
-macOS is the primary, best-tested platform. Linux and Windows build and pass the
-full CI suite on every push, but have had less hands-on testing — bug reports on
-those platforms are especially welcome.
-
-On the near-term list: more cleanup rules (contributions welcome — see below)
-and surfacing restore-from-Trash in the UI.
 
 ## Contributing
 
