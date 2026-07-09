@@ -94,7 +94,10 @@ mod tests {
 
     #[test]
     fn regenerability_strings_are_stable() {
-        assert_eq!(regenerability_str(Regenerability::Regenerable), "regenerable");
+        assert_eq!(
+            regenerability_str(Regenerability::Regenerable),
+            "regenerable"
+        );
         assert_eq!(regenerability_str(Regenerability::Cache), "cache");
         assert_eq!(regenerability_str(Regenerability::Review), "review");
     }

@@ -108,13 +108,14 @@ pub fn build_digest(store: &ScanStore, redact: bool) -> Digest {
 
     let mut lines = Vec::new();
     let mut path_to_node = HashMap::new();
-    let mut stack: Vec<(u32, Vec<String>)> = vec![(store.root, Vec::new())];
-    // DFS emitting kept nodes with display paths built top-down.
+    // DFS emitting kept nodes with display paths built top-down. `parts` is
+    // one shared stack, pushed/popped around recursion, so ancestor names
+    // aren't cloned once per directory in the tree.
     #[allow(clippy::too_many_arguments)]
     fn visit(
         store: &ScanStore,
         id: u32,
-        parts: &[String],
+        parts: &mut Vec<String>,
         keep: &HashSet<u32>,
         known: &HashSet<&'static str>,
         redact: bool,
@@ -124,8 +125,8 @@ pub fn build_digest(store: &ScanStore, redact: bool) -> Digest {
         path_to_node: &mut HashMap<String, u32>,
     ) {
         let node = &store.nodes[id as usize];
-        let mut parts = parts.to_vec();
-        if id != store.root {
+        let pushed = id != store.root;
+        if pushed {
             let display_name = if redact && !known.contains(node.name.as_str()) {
                 let next = pseudonyms.len() + 1;
                 pseudonyms
@@ -165,7 +166,7 @@ pub fn build_digest(store: &ScanStore, redact: bool) -> Digest {
                 visit(
                     store,
                     c,
-                    &parts,
+                    parts,
                     keep,
                     known,
                     redact,
@@ -176,21 +177,22 @@ pub fn build_digest(store: &ScanStore, redact: bool) -> Digest {
                 );
             }
         }
+        if pushed {
+            parts.pop();
+        }
     }
-    while let Some((id, parts)) = stack.pop() {
-        visit(
-            store,
-            id,
-            &parts,
-            &keep,
-            &known,
-            redact,
-            &mut pseudonyms,
-            now,
-            &mut lines,
-            &mut path_to_node,
-        );
-    }
+    visit(
+        store,
+        store.root,
+        &mut Vec::new(),
+        &keep,
+        &known,
+        redact,
+        &mut pseudonyms,
+        now,
+        &mut lines,
+        &mut path_to_node,
+    );
 
     let platform = if cfg!(target_os = "macos") {
         "macOS"
