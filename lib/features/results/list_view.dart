@@ -72,7 +72,6 @@ class ListDirView extends ConsumerWidget {
       ascending: asc,
       limit: 500,
     );
-    final selectedId = ref.watch(selectedNodeProvider)?.id;
 
     if (rows.isEmpty) {
       return Center(
@@ -92,8 +91,7 @@ class ListDirView extends ConsumerWidget {
         Expanded(
           child: ListView.builder(
             itemCount: rows.length,
-            itemBuilder: (context, i) =>
-                _Row(node: rows[i], selected: rows[i].id == selectedId),
+            itemBuilder: (context, i) => _Row(node: rows[i]),
           ),
         ),
       ],
@@ -166,15 +164,15 @@ class _HeaderRow extends ConsumerWidget {
 }
 
 class _Row extends ConsumerWidget {
-  const _Row({required this.node, required this.selected});
+  const _Row({required this.node});
 
   final FsNode node;
-  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final selected = ref.watch(selectedNodeProvider)?.id == node.id;
     final deleted = ref.watch(deletedIdsProvider).contains(node.id);
     final canDrill =
         node.kind == FsKind.dir && node.childCount > 0 && node.id >= 0;
@@ -281,7 +279,6 @@ class SearchResultsView extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final results = ref.watch(searchResultsProvider);
-    final selectedId = ref.watch(selectedNodeProvider)?.id;
 
     if (results.isEmpty) {
       return Center(
@@ -320,71 +317,76 @@ class SearchResultsView extends ConsumerWidget {
         Expanded(
           child: ListView.builder(
             itemCount: results.length,
-            itemBuilder: (context, i) {
-              final node = results[i];
-              final tierColor = switch (node.tier) {
-                FsTier.safe => theme.tiers.safe,
-                FsTier.review => theme.tiers.review,
-                FsTier.protected => theme.tiers.protected,
-                FsTier.none => null,
-              };
-              return Material(
-                color: node.id == selectedId
-                    ? scheme.primary.withValues(alpha: 0.10)
-                    : Colors.transparent,
-                child: InkWell(
-                  onTap: () => revealNodeId(ref, node.id),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          node.kind == FsKind.dir
-                              ? Icons.folder_rounded
-                              : Icons.insert_drive_file_rounded,
-                          size: 15,
-                          color: tierColor ?? scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                node.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                              Text(
-                                node.path,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: mono(
-                                  10.5,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          formatBytes(node.size),
-                          style: mono(12, color: scheme.onSurface),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+            itemBuilder: (context, i) => _SearchResultRow(node: results[i]),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SearchResultRow extends ConsumerWidget {
+  const _SearchResultRow({required this.node});
+
+  final FsNode node;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selected = ref.watch(selectedNodeProvider)?.id == node.id;
+    final tierColor = switch (node.tier) {
+      FsTier.safe => theme.tiers.safe,
+      FsTier.review => theme.tiers.review,
+      FsTier.protected => theme.tiers.protected,
+      FsTier.none => null,
+    };
+    return Material(
+      color: selected
+          ? scheme.primary.withValues(alpha: 0.10)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: () => revealNodeId(ref, node.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                node.kind == FsKind.dir
+                    ? Icons.folder_rounded
+                    : Icons.insert_drive_file_rounded,
+                size: 15,
+                color: tierColor ?? scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      node.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    Text(
+                      node.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(10.5, color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                formatBytes(node.size),
+                style: mono(12, color: scheme.onSurface),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
