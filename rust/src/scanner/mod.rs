@@ -306,7 +306,6 @@ fn walk(
         }
     };
 
-    let mut names: HashSet<String> = HashSet::new();
     let mut files = Vec::new();
     let mut dirs: Vec<(String, PathBuf, i64)> = Vec::new();
     for entry in read {
@@ -325,7 +324,6 @@ fn walk(
             }
         };
         let entry_name = entry.file_name().to_string_lossy().into_owned();
-        names.insert(entry_name.clone());
         if file_type.is_dir() {
             if is_skipped_mount(&entry.path()) {
                 continue;
@@ -338,6 +336,31 @@ fn walk(
             files.push((entry_name, entry));
         }
     }
+
+    // Rule-match subdirectories before `files`/`dirs` are consumed below.
+    // Sibling names are only collected (borrowed, no copies) when some subdir
+    // is actually a sibling-dependent rule candidate — almost never, so the
+    // common case does no set-building at all.
+    let matched_here = in_matched || rule.is_some();
+    let dir_rules: Vec<Option<u16>> = if matched_here {
+        vec![None; dirs.len()]
+    } else {
+        let need_names = dirs
+            .iter()
+            .any(|(name, _, _)| ctx.rules.needs_sibling_check(name));
+        let names: HashSet<&str> = if need_names {
+            files
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .chain(dirs.iter().map(|(name, _, _)| name.as_str()))
+                .collect()
+        } else {
+            HashSet::new()
+        };
+        dirs.iter()
+            .map(|(name, _, _)| ctx.rules.match_dir(name, &names))
+            .collect()
+    };
 
     let mut small_sum: u64 = 0;
     let mut small_logical: u64 = 0;
@@ -403,15 +426,10 @@ fn walk(
         });
     }
 
-    let matched_here = in_matched || rule.is_some();
     let mut sub: Vec<TmpNode> = dirs
         .into_par_iter()
-        .map(|(dir_name, dir_path, dir_mtime)| {
-            let r = if matched_here {
-                None
-            } else {
-                ctx.rules.match_dir(&dir_name, &names)
-            };
+        .zip(dir_rules.into_par_iter())
+        .map(|((dir_name, dir_path, dir_mtime), r)| {
             walk(
                 &dir_path,
                 dir_name,
@@ -629,6 +647,69 @@ mod tests {
         );
         assert_eq!(matched[0].name, "node_modules");
         assert_eq!(matched[0].tier, Tier::Safe);
+    }
+
+    /// Wall-time probe against a real tree; not part of the normal suite.
+    /// Run: SCAN_BENCH_ROOT=$HOME cargo test --release -- --ignored --nocapture scan_bench
+    #[test]
+    #[ignore]
+    fn scan_bench() {
+        let root = std::env::var("SCAN_BENCH_ROOT").expect("set SCAN_BENCH_ROOT to a directory");
+        let start = std::time::Instant::now();
+        let store = scan(
+            Path::new(&root),
+            RuleSet::builtin(),
+            &ProgressCounters::default(),
+        );
+        let elapsed = start.elapsed();
+        let root_node = &store.nodes[store.root as usize];
+        println!(
+            "scanned {} files / {} dirs -> {} nodes in {:?}",
+            root_node.file_count,
+            root_node.dir_count,
+            store.nodes.len(),
+            elapsed
+        );
+    }
+
+    #[test]
+    fn directory_named_sibling_marker_still_matches() {
+        // Sibling markers can be directories, not just files; the lazily
+        // built sibling set must include both.
+        use crate::rules::{MatchSpec, Regenerability, Rule, RuleSet};
+        let rule = Rule {
+            id: "test-dir-sibling".into(),
+            name: "Test".into(),
+            category: "test".into(),
+            regenerability: Regenerability::Cache,
+            regenerate_with: None,
+            explanation: "test".into(),
+            platforms: None,
+            matcher: MatchSpec {
+                dir_name: Some("cachedir".into()),
+                siblings: vec!["marker.d".into()],
+                home_path: None,
+            },
+        };
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("proj/cachedir")).unwrap();
+        fs::create_dir_all(root.join("proj/marker.d")).unwrap();
+        write_bytes(&root.join("proj/cachedir/blob.bin"), 1_200_000);
+        fs::create_dir_all(root.join("other/cachedir")).unwrap();
+        write_bytes(&root.join("other/cachedir/blob.bin"), 1_200_000);
+
+        let store = scan(
+            root,
+            RuleSet::from_rules(vec![rule]),
+            &ProgressCounters::default(),
+        );
+        let matched: Vec<&Node> = store.nodes.iter().filter(|n| n.rule.is_some()).collect();
+        assert_eq!(matched.len(), 1, "only the marked sibling may match");
+        assert_eq!(
+            store.path_of(store.nodes.iter().position(|n| n.rule.is_some()).unwrap() as u32),
+            root.join("proj/cachedir")
+        );
     }
 
     #[test]
