@@ -1,4 +1,5 @@
 use super::scan::FsTier;
+use crate::rules::Regenerability;
 use crate::scanner::{Tier, STORE};
 
 pub struct Insight {
@@ -60,7 +61,7 @@ pub fn get_insights() -> Vec<Insight> {
                 rule_id: rule.id.clone(),
                 rule_name: rule.name.clone(),
                 category: rule.category.clone(),
-                regenerability: format!("{:?}", rule.regenerability).to_lowercase(),
+                regenerability: regenerability_str(rule.regenerability).to_string(),
                 regenerate_with: rule.regenerate_with.clone(),
                 explanation: rule.explanation.clone(),
                 stale_days: if mtime > 0 {
@@ -75,4 +76,26 @@ pub fn get_insights() -> Vec<Insight> {
     }
     out.sort_by_key(|i| std::cmp::Reverse(i.size));
     out
+}
+
+/// Stable, lowercase names the UI keys on — kept independent of the enum's
+/// Debug representation.
+fn regenerability_str(r: Regenerability) -> &'static str {
+    match r {
+        Regenerability::Regenerable => "regenerable",
+        Regenerability::Cache => "cache",
+        Regenerability::Review => "review",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn regenerability_strings_are_stable() {
+        assert_eq!(regenerability_str(Regenerability::Regenerable), "regenerable");
+        assert_eq!(regenerability_str(Regenerability::Cache), "cache");
+        assert_eq!(regenerability_str(Regenerability::Review), "review");
+    }
 }
