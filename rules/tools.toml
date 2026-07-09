@@ -25,6 +25,18 @@ platforms = ["linux"]
 home_path = ".cache/go-build"
 
 [[rule]]
+id = "go-build-cache-windows"
+name = "Go build cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on go build"
+explanation = "Compiled Go packages; equivalent to `go clean -cache`."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/go-build"
+
+[[rule]]
 id = "go-module-cache"
 name = "Go module cache"
 category = "Package manager caches"
@@ -71,6 +83,18 @@ platforms = ["linux"]
 home_path = ".cache/JetBrains"
 
 [[rule]]
+id = "jetbrains-caches-windows"
+name = "JetBrains IDE caches"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "IDEs re-index on next launch"
+explanation = "Indexes and caches for IntelliJ-family IDEs. Safe to clear; the next launch re-indexes open projects (can take a while)."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/JetBrains"
+
+[[rule]]
 id = "docker-desktop-vm"
 name = "Docker Desktop disk image"
 category = "Containers & VMs"
@@ -81,3 +105,98 @@ platforms = ["macos"]
 
 [rule.match]
 home_path = "Library/Containers/com.docker.docker/Data/vms"
+
+[[rule]]
+id = "docker-desktop-vm-windows"
+name = "Docker Desktop disk image"
+category = "Containers & VMs"
+regenerability = "review"
+regenerate_with = "docker system prune"
+explanation = "Docker Desktop's WSL2 disk holding ALL images, containers, and volumes. Don't delete the file directly — reclaim space with `docker system prune` or Docker Desktop's settings."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/Docker/wsl"
+
+[[rule]]
+id = "docker-rootless-data"
+name = "Docker data directory (rootless)"
+category = "Containers & VMs"
+regenerability = "review"
+regenerate_with = "docker system prune"
+explanation = "Rootless Docker's data root with ALL your images, containers, and volumes. Don't delete it directly — reclaim space with `docker system prune`."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".local/share/docker"
+
+[[rule]]
+id = "nuget-packages"
+name = "NuGet global package cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "dotnet restore"
+explanation = ".NET packages NuGet keeps globally; re-fetched per project on demand."
+
+[rule.match]
+home_path = ".nuget/packages"
+
+[[rule]]
+id = "ccache"
+name = "ccache compiler cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on the next compile"
+explanation = "Cached C/C++ compiler output; equivalent to `ccache -C`. First build afterwards is slower."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/ccache"
+
+[[rule]]
+id = "ccache-legacy"
+name = "ccache compiler cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on the next compile"
+explanation = "Cached C/C++ compiler output at the legacy location; equivalent to `ccache -C`. First build afterwards is slower."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".ccache"
+
+[[rule]]
+id = "composer-cache-linux"
+name = "Composer cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on composer install"
+explanation = "PHP packages Composer caches to speed up installs; re-downloaded on demand."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/composer"
+
+[[rule]]
+id = "composer-cache-windows"
+name = "Composer cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on composer install"
+explanation = "PHP packages Composer caches to speed up installs; re-downloaded on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/Composer"
+
+[[rule]]
+id = "vcpkg-archives-windows"
+name = "vcpkg binary cache"
+category = "IDE & build caches"
+regenerability = "cache"
+regenerate_with = "vcpkg rebuilds packages on demand"
+explanation = "Prebuilt vcpkg packages cached for reuse across projects; rebuilt from source when missing."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/vcpkg/archives"

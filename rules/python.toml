@@ -82,3 +82,51 @@ platforms = ["linux"]
 
 [rule.match]
 home_path = ".cache/uv"
+
+[[rule]]
+id = "uv-cache-windows"
+name = "uv cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "refills automatically on uv sync"
+explanation = "uv's global wheel and source cache; rebuilt on demand."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/uv/cache"
+
+[[rule]]
+id = "poetry-cache"
+name = "Poetry cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "poetry install re-downloads on demand"
+explanation = "Poetry's download and wheel cache; re-fetched when projects need it."
+platforms = ["macos"]
+
+[rule.match]
+home_path = "Library/Caches/pypoetry"
+
+[[rule]]
+id = "poetry-cache-linux"
+name = "Poetry cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "poetry install re-downloads on demand"
+explanation = "Poetry's download and wheel cache; re-fetched when projects need it."
+platforms = ["linux"]
+
+[rule.match]
+home_path = ".cache/pypoetry"
+
+[[rule]]
+id = "poetry-cache-windows"
+name = "Poetry cache"
+category = "Package manager caches"
+regenerability = "cache"
+regenerate_with = "poetry install re-downloads on demand"
+explanation = "Poetry's download and wheel cache; re-fetched when projects need it."
+platforms = ["windows"]
+
+[rule.match]
+home_path = "AppData/Local/pypoetry/Cache"
