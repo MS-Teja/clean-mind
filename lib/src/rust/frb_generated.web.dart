@@ -42,6 +42,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  DiskSpace dco_decode_box_autoadd_disk_space(dynamic raw);
+
+  @protected
   FsNode dco_decode_box_autoadd_fs_node(dynamic raw);
 
   @protected
@@ -49,6 +52,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UiPrefs dco_decode_box_autoadd_ui_prefs(dynamic raw);
+
+  @protected
+  DiskSpace dco_decode_disk_space(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -111,6 +117,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  DiskSpace? dco_decode_opt_box_autoadd_disk_space(dynamic raw);
+
+  @protected
   FsNode? dco_decode_opt_box_autoadd_fs_node(dynamic raw);
 
   @protected
@@ -152,6 +161,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  DiskSpace sse_decode_box_autoadd_disk_space(SseDeserializer deserializer);
+
+  @protected
   FsNode sse_decode_box_autoadd_fs_node(SseDeserializer deserializer);
 
   @protected
@@ -159,6 +171,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UiPrefs sse_decode_box_autoadd_ui_prefs(SseDeserializer deserializer);
+
+  @protected
+  DiskSpace sse_decode_disk_space(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -223,6 +238,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  DiskSpace? sse_decode_opt_box_autoadd_disk_space(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   FsNode? sse_decode_opt_box_autoadd_fs_node(SseDeserializer deserializer);
 
   @protected
@@ -271,6 +291,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_disk_space(
+    DiskSpace self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_fs_node(FsNode self, SseSerializer serializer);
 
   @protected
@@ -281,6 +307,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_ui_prefs(UiPrefs self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_disk_space(DiskSpace self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -353,6 +382,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_disk_space(
+    DiskSpace? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_fs_node(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../src/rust/api/scan.dart';
+import '../../src/rust/api/system.dart';
 
 /// Directory the next scan will walk. Starts from the last root the user
 /// picked (falling back to home); scan *data* is never persisted.
@@ -18,6 +19,12 @@ class ScanRootController extends Notifier<String> {
 
 final scanRootProvider =
     NotifierProvider<ScanRootController, String>(ScanRootController.new);
+
+/// Capacity and free space of the volume holding [path]; null when the path
+/// doesn't resolve to a mounted filesystem.
+final diskSpaceProvider = Provider.autoDispose.family<DiskSpace?, String>(
+  (ref, path) => diskSpace(path: path),
+);
 
 sealed class ScanState {
   const ScanState();

@@ -7,6 +7,8 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'scan.dart';
 
+// These functions are ignored because they are not marked as `pub`: `regenerability_str`
+
 /// Everything the rules engine flagged, largest first. Nested matches under
 /// an already-flagged directory are excluded so sizes never double count.
 List<Insight> getInsights() =>

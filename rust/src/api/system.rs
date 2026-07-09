@@ -240,6 +240,81 @@ pub fn set_ui_prefs(prefs: UiPrefs) {
     let _ = crate::config::save(&settings);
 }
 
+pub struct DiskSpace {
+    /// Capacity of the volume holding the queried path, in bytes.
+    pub total_bytes: i64,
+    /// Bytes available to the current user on that volume.
+    pub free_bytes: i64,
+}
+
+/// Capacity and free space of the volume containing `path`, or None if the
+/// path doesn't resolve to a mounted filesystem.
+#[flutter_rust_bridge::frb(sync)]
+pub fn disk_space(path: String) -> Option<DiskSpace> {
+    volume_space(std::path::Path::new(&path))
+}
+
+// statfs, not statvfs, on macOS: statvfs there reports f_bavail in f_frsize
+// units inconsistently across FS types; statfs's f_bsize accounting matches
+// what Finder and df report.
+#[cfg(target_os = "macos")]
+fn volume_space(path: &std::path::Path) -> Option<DiskSpace> {
+    use std::os::unix::ffi::OsStrExt;
+    let c = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+    let mut st: libc::statfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statfs(c.as_ptr(), &mut st) } != 0 {
+        return None;
+    }
+    let bsize = st.f_bsize as u64;
+    Some(DiskSpace {
+        total_bytes: st.f_blocks.saturating_mul(bsize) as i64,
+        free_bytes: st.f_bavail.saturating_mul(bsize) as i64,
+    })
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn volume_space(path: &std::path::Path) -> Option<DiskSpace> {
+    use std::os::unix::ffi::OsStrExt;
+    let c = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+    let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
+        return None;
+    }
+    let frsize = st.f_frsize as u64;
+    Some(DiskSpace {
+        total_bytes: (st.f_blocks as u64).saturating_mul(frsize) as i64,
+        free_bytes: (st.f_bavail as u64).saturating_mul(frsize) as i64,
+    })
+}
+
+#[cfg(windows)]
+fn volume_space(path: &std::path::Path) -> Option<DiskSpace> {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut avail: u64 = 0;
+    let mut total: u64 = 0;
+    let mut free: u64 = 0;
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW(
+            wide.as_ptr(),
+            &mut avail,
+            &mut total,
+            &mut free,
+        )
+    };
+    if ok == 0 {
+        return None;
+    }
+    Some(DiskSpace {
+        total_bytes: total as i64,
+        free_bytes: avail as i64,
+    })
+}
+
 pub struct UpdateCheck {
     pub current: String,
     pub latest: String,
@@ -324,6 +399,15 @@ fn is_newer(candidate: &str, current: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::is_newer;
+
+    #[test]
+    fn disk_space_reports_sane_numbers() {
+        let home = dirs::home_dir().expect("home dir");
+        let ds = super::volume_space(&home).expect("home volume resolves");
+        assert!(ds.total_bytes > 0);
+        assert!(ds.free_bytes >= 0);
+        assert!(ds.free_bytes <= ds.total_bytes);
+    }
 
     #[test]
     fn version_comparison() {
