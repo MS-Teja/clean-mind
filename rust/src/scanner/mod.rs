@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Mutex, RwLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 use std::time::UNIX_EPOCH;
 
 use rayon::prelude::*;
@@ -79,6 +79,10 @@ pub struct ScanStore {
     /// guard), capped at [`SKIP_CAP`]. Itemized so the UI can name them.
     pub skipped: Vec<String>,
     pub rules: RuleSet,
+    /// Lowercased node names, built on first search (indexes match `nodes`)
+    /// and dropped with the store, so search doesn't re-lowercase the whole
+    /// arena on every keystroke.
+    pub lower_names: OnceLock<Vec<String>>,
 }
 
 impl ScanStore {
@@ -232,6 +236,7 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> ScanSto
         errors: progress.errors.load(Ordering::Relaxed),
         skipped,
         rules,
+        lower_names: OnceLock::new(),
     };
     finalize(&mut store);
     store
