@@ -1,108 +1,90 @@
-# Clean Mind — website content
+# Clean Mind — website content source
 
-Copy and structure for a one-page marketing site (e.g. GitHub Pages under
-`/docs`, or any static host). This file is **content, not code** — hand it to
-whoever builds the site. Everything here is drawn from the app and README so it
-stays truthful.
+Content reference for the marketing site in `docs/` (served via GitHub Pages).
+Everything here is drawn from the app and the README so the site stays
+truthful. When a feature or install path changes, this file, the README, and
+`index.html` should change together.
 
 ## Brand
 
 - **Name:** Clean Mind
 - **Logo:** `docs/logo.png`
 - **One-liner:** See what fills your disk — and understand what's safe to reclaim.
-- **Elevator pitch:** A free, open-source, cross-platform disk analyzer built for
-  developers. It doesn't just show you a pretty chart — it recognizes regenerable
-  developer junk (`node_modules`, build caches, `.venv`s), tells you *why* each is
-  safe to delete, and shows the exact command that rebuilds it.
+- **Elevator pitch:** A free, open-source, cross-platform disk analyzer built
+  for developers. It doesn't just show a chart — it recognizes regenerable
+  developer junk (`node_modules`, build caches, `.venv`s), explains *why* each
+  item is safe to delete, and shows the exact command that rebuilds it.
 - **Voice:** calm, technical, honest. No hype, no fake urgency.
-- **Look:** dark, near-black background with a single emerald accent (match the
-  app — the "safe to reclaim" green, roughly `#3DDC97`). Monospace for
-  sizes/commands, a clean geometric sans for headings. Reuse the app's feel:
-  rounded cards, soft borders, lots of breathing room.
+- **Terminology:** always "pseudonymize folder names" (never "redact");
+  tiers are "Safe · regenerable", "Review", "Protected".
 
-## Assets (already in the repo)
+## Design system ("The Lab Report")
 
-- Hero: `docs/demo.gif` (scan → treemap → insights → move to Trash)
+The site is styled as a typeset engineering document: paper background
+(`#fafaf7`), ink text (`#141715`), hairline rules, one mint accent
+(`#0a7f5f`) reserved for safe/reclaim semantics, amber for the review tier.
+Space Grotesk for display type, JetBrains Mono for all numbers, paths, and
+annotations. No rounded corners, shadows, or gradients. Sections are numbered
+like a document (§01–§07) and figures are captioned (`fig. 01`, `plate II`).
+
+## Page structure
+
+1. **Title block** — poster headline "Reclaim your disk, safely.", abstract,
+   download button, and `fig. 01`: an ink-axonometric treemap of a sample scan
+   (519 MB verified safe). A badge strip (version · license · platforms · no
+   telemetry) closes the section.
+2. **§01 The problem** — the agentic-coding-era framing: coding agents fill
+   disks with regenerable artifacts; the hard part is knowing which.
+3. **§02 The method** — a scroll-driven figure that acts out
+   Scan → Understand → Classify → Clean. Performance claim used here: a home
+   directory of ~1.2 million files scans in about 8 seconds.
+4. **§03 The trust model** — three tiers as a spec table; the rules engine,
+   not the AI, is the source of truth.
+5. **§04 Privacy** — "Private by design, not by policy." Offline by default,
+   BYO key or local Ollama, metadata only, keys in the OS keychain, and the
+   pseudonymization ledger (`dir-1`, `dir-2`, … — structural names like
+   `node_modules` stay readable).
+6. **§05 Plates** — `demo.gif` plus the two screenshots, captioned.
+7. **§06 In one line** — "The DaisyDisk idea — free, cross-platform, and it
+   actually understands a developer's disk", over a ticker of recognized
+   artifacts.
+8. **§07 Download & install** — see below.
+9. **Colophon** — license, author, project links, privacy line.
+
+## Install (mirrors the README)
+
+- **macOS — Homebrew (recommended):**
+  `brew install --cask MS-Teja/clean-mind/clean-mind`
+  Alternative: universal DMG (Apple silicon + Intel). Not notarized — on
+  macOS 15+ open once, then System Settings → Privacy & Security → Open
+  Anyway; earlier versions: right-click → Open. Grant Full Disk Access for
+  complete results.
+- **Windows — Scoop (recommended):**
+  `scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind`
+  then `scoop install clean-mind`.
+  Alternative: portable zips — x64 (Intel/AMD) or arm64 (Snapdragon X);
+  extract and run `clean_mind.exe`. SmartScreen: More info → Run anyway.
+- **Linux — Debian/Ubuntu/Kali/Mint:**
+  `sudo apt install ./clean-mind_<version>_amd64.deb` (or `_arm64.deb`).
+  Other distros: `linux-x64` / `linux-arm64` tarball with `install.sh`
+  (per-user, no root) or run the binary directly. Requires GTK 3.
+
+All platforms ship x64 and arm64. The download section resolves the latest
+release (version, direct links, sizes) from the GitHub API at page load, with
+the releases page as the no-JS fallback.
+
+## Assets
+
+- `docs/logo.png` — app icon (used in the running head, masthead, favicon)
+- `docs/demo.gif` — scan → treemap → insights → move to Trash
 - `docs/screenshot-treemap.png`, `docs/screenshot-insights.png`
-- `docs/logo.png`
+- `docs/fonts/` — self-hosted Space Grotesk + JetBrains Mono
+- `docs/vendor/three.module.js` — vendored Three.js for the §02 figure
 
-## Page structure (top to bottom)
+## Build notes
 
-### 1. Hero
-- **Headline:** Reclaim your disk, safely.
-- **Subhead:** Clean Mind is a free, open-source disk analyzer for developers. It
-  finds regenerable junk, tells you why it's safe to delete, and shows the command
-  to get it back.
-- **Primary CTA:** `brew install --cask MS-Teja/clean-mind/clean-mind` (copy
-  button) — with a "Download for macOS / Linux / Windows" link to the latest
-  release.
-- **Secondary CTA:** View on GitHub.
-- **Visual:** `docs/demo.gif`, large.
-- Badge strip: Apache-2.0 · macOS · Linux · Windows · No telemetry.
-
-### 2. The problem (rotate the framing, don't over-rely on one)
-- Lead line: *Storage fills up quietly — and the agentic-coding era made it
-  worse.* Spin up throwaway repos with an AI agent all day and you drown in
-  `node_modules`, build caches, and `.venv`s. Most of it is regenerable; the hard
-  part is knowing which.
-- Supporting line: Every "cleaner" shows you *where* the space went and leaves you
-  to guess whether deleting a folder will wreck a project. Clean Mind actually
-  understands your disk.
-
-### 3. How it works (4 steps, icons)
-1. **Scan** — a fast parallel Rust scanner walks any folder (or drag one in).
-2. **Understand** — an interactive treemap, or a sortable list, shows where it went.
-3. **Classify** — a rules engine flags known developer artifacts by how safely
-   they regenerate.
-4. **Clean** — one-click reclaim to the Trash; nothing is ever deleted automatically.
-
-### 4. Feature grid (6 cards — pull from README; privacy leads)
-- 🔒 Private by design (offline, no telemetry, no account; scan results only in memory)
-- 🤖 AI on your terms (BYO key or local Ollama; metadata only; optional
-  pseudonymization replaces personal folder names with `dir-1`, `dir-2`, …
-  before anything leaves the machine)
-- 🧠 It knows developer junk (with the regenerate command)
-- ✅ Safe by construction (three tiers + hard denylist + Trash-first)
-- 💻 One native app on macOS, Linux, and Windows — x64 and arm64, all first-class
-- ⚡ Native and fast (parallel Rust, 1.2M files ≈ 8 s, low memory, no Electron)
-
-### 5. The trust model (short, builds confidence)
-Three tiers: **Safe · regenerable** (rules-verified, one-click) → **Review**
-(LLM suggestions, never one-click) → **Protected** (hard denylist nothing can
-override). The rules engine, not the AI, is the source of truth.
-Privacy sub-point worth a line: with pseudonymization on, the AI never even
-learns your folder names — it sees `dir-1`, `dir-2`, … (structural names like
-`node_modules` stay readable) and answers are mapped back to real paths locally.
-
-### 6. Performance strip
-Parallel Rust core across every core · a home directory in seconds · true on-disk
-sizes (hardlink- & APFS-clone-aware) · native binary, no background daemon.
-
-### 7. Cross-platform strip
-One native app on macOS, Linux, and Windows — each using the right OS conventions
-(Trash vs Recycle Bin, per-platform volumes, long paths on Windows).
-
-### 8. Install
-- macOS (Homebrew, recommended): `brew install --cask MS-Teja/clean-mind/clean-mind`
-- Windows (Scoop, recommended): `scoop bucket add clean-mind
-  https://github.com/MS-Teja/scoop-clean-mind` then `scoop install clean-mind`
-- Linux: `.deb` for Debian/Ubuntu/Kali/Mint (amd64 + arm64), tarball +
-  `install.sh` for everything else
-- Manual fallbacks: universal DMG (Apple silicon + Intel), x64/arm64 zips —
-  link to the release. Note the unsigned-app first-launch step for the DMG
-  (right-click → Open).
-
-### 9. Open source / footer
-- Apache-2.0, built by Siva Teja Mutyala.
-- Links: GitHub repo, latest release, license, contributing (add a cleanup rule).
-- Small privacy reassurance line: no telemetry, no account, no bundled inference.
-
-## Build notes (for whoever implements it)
-- Single static page is enough; GitHub Pages from `/docs` works and matches where
-  the assets already live.
-- Keep it self-contained and fast (no heavy frameworks needed). Inline the CSS,
-  lazy-load the GIF.
-- Make the install command one-click-copy.
-- Respect `prefers-color-scheme`, but the app's identity is dark-first.
-- Don't invent claims — everything above is true of the current app; if a feature
-  changes, update this file and the README together.
+- Static site, no build step; GitHub Pages serves `/docs` from `main`.
+- `figure.js` draws the §02 scene (WebGL, orthographic); it falls back to the
+  masthead SVG when WebGL is unavailable, and all motion respects
+  `prefers-reduced-motion`.
+- Claims on the page must stay true of the current app.
