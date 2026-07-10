@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 PackageIdentifier: MS-Teja.CleanMind
-PackageVersion: 1.2.0
+PackageVersion: 1.2.1
 PackageLocale: en-US
 Publisher: Siva Teja Mutyala
 PublisherUrl: https://github.com/MS-Teja
@@ -14,7 +14,7 @@ Description: >-
   Clean Mind scans folders and disks, visualizes usage as an interactive
   treemap, and flags regenerable developer clutter (build artifacts, caches,
   dependency directories) that is safe to reclaim.
-ReleaseNotesUrl: https://github.com/MS-Teja/clean-mind/releases/tag/v1.2.0
+ReleaseNotesUrl: https://github.com/MS-Teja/clean-mind/releases/tag/v1.2.1
 Tags:
   - disk-usage
   - disk-space
