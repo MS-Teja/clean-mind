@@ -1,0 +1,43 @@
+name: Cleanup rule suggestion
+description: A regenerable cache or artifact Clean Mind should recognize
+labels: [rules]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool / ecosystem
+      placeholder: "e.g. Gradle, Unity, conda"
+    validations:
+      required: true
+  - type: input
+    id: path
+    attributes:
+      label: Where it lives
+      description: Directory name and location — and any sibling file that identifies it (like package.json next to node_modules).
+      placeholder: "e.g. ~/.gradle/caches, or build/ next to build.gradle"
+    validations:
+      required: true
+  - type: input
+    id: regenerate
+    attributes:
+      label: How it comes back
+      description: The command or action that regenerates it after deletion.
+      placeholder: "e.g. gradle build"
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Platforms
+      multiple: true
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    id: caveats
+    attributes:
+      label: Caveats
+      description: Anything that makes deleting it risky in some setups? (If it's ever unsafe, it belongs in the review tier, not one-click.)
