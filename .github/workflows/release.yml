@@ -274,17 +274,19 @@ jobs:
 
       # Body = "What's new" (curated, .github/release-notes.md) + install
       # instructions (.github/release-install.md). The action then appends
-      # auto-generated notes for the full commit list.
+      # auto-generated notes for the full commit list. `<version>` in the
+      # install doc becomes the real version so commands are copy-pasteable.
       - name: Compose release body
         shell: bash
         run: |
           set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
           {
             if [ -f .github/release-notes.md ]; then
               cat .github/release-notes.md
               echo
             fi
-            cat .github/release-install.md
+            sed "s/<version>/${VERSION}/g" .github/release-install.md
           } > release-body.md
 
       - name: Create GitHub release

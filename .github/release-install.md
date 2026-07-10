@@ -13,9 +13,9 @@ This free app is not notarized (there is no paid Apple Developer account behind 
 - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
 
 ### Linux
-On Debian/Ubuntu/Kali/Pop!_OS/Mint, grab the `.deb` for your CPU — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, Apple-silicon VMs) — and install it system-wide:
+On Debian/Ubuntu/Kali/Pop!_OS/Mint: **first download** the `.deb` for your CPU from the assets below — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, VMs on Apple-silicon Macs; not sure, run `dpkg --print-architecture`). Then install it from the folder you downloaded it to (keep the `./` — it tells apt this is a local file):
 ```
-sudo apt install ./clean-mind_<version>_amd64.deb
+sudo apt install ./clean-mind_<version>_arm64.deb   # or _amd64.deb
 ```
 This adds a launcher entry and a `clean-mind` command. Requires GTK 3 (pulled in automatically).
 
@@ -27,6 +27,6 @@ Easiest via [Scoop](https://scoop.sh):
 scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
 scoop install clean-mind
 ```
-Or pick the zip for your CPU — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs) — extract it, and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+Or download the zip for your CPU from the assets below — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs) — extract it, and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
 
 Issue reports for Linux and Windows are very welcome.

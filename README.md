@@ -98,11 +98,13 @@ Or download the `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X) zip,
 
 **Linux — Debian/Ubuntu/Kali/Mint:**
 
+First download the `.deb` for your CPU from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest): `amd64` for Intel/AMD, `arm64` for Arm — including VMs on an Apple-silicon Mac. Not sure which? Run `dpkg --print-architecture`. Then, from the folder you downloaded it to:
+
 ```sh
-sudo apt install ./clean-mind_<version>_amd64.deb   # or _arm64.deb
+sudo apt install ./clean-mind_<version>_<arch>.deb   # your downloaded file's name; keep the ./
 ```
 
-Other distros: extract the `linux-x64` or `linux-arm64` tarball and run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root), or launch `./clean-mind/clean_mind` directly. Requires GTK 3.
+Other distros: download and extract the `linux-x64` or `linux-arm64` tarball, then run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root), or launch `./clean-mind/clean_mind` directly. Requires GTK 3.
 
 All three platforms are tested and supported — bug reports are welcome everywhere.
 
