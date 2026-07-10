@@ -77,7 +77,7 @@ The insights panel groups reclaimable items and, for each one, explains *why* it
 
 ## Install
 
-Grab the build for your platform from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest).
+All downloads are on the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest) page. Every platform ships x64 and arm64.
 
 **macOS — Homebrew (recommended):**
 
@@ -85,9 +85,7 @@ Grab the build for your platform from the [latest release](https://github.com/MS
 brew install --cask MS-Teja/clean-mind/clean-mind
 ```
 
-Or download the universal DMG (Apple silicon + Intel) and drag **Clean Mind** to Applications. The app is not notarized (a free app with no paid Apple Developer account behind it), so the first launch needs one extra step: *macOS 15+*: open once, then **System Settings → Privacy & Security → Open Anyway**; *macOS 14 and earlier*: right-click → **Open** → **Open**. Or: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`.
-
-On first scan, macOS asks for access to folders like Documents and Desktop — normal per-folder prompts. For complete results, grant **Full Disk Access**; the app detects when it's missing and links to the right settings pane.
+Or download the universal DMG and drag **Clean Mind** to Applications. The app isn't notarized, so the first launch needs one extra step — macOS 15+: open once, then **System Settings → Privacy & Security → Open Anyway**; earlier: right-click → **Open**. When macOS asks for folder access on the first scan, that's the normal per-folder prompt; grant **Full Disk Access** for complete results.
 
 **Windows — Scoop (recommended):**
 
@@ -96,7 +94,7 @@ scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
 scoop install clean-mind
 ```
 
-Or download the zip for your CPU (`windows-x64` for Intel/AMD, `windows-arm64` for Snapdragon X and other Arm PCs), extract, and run `clean_mind.exe`. If SmartScreen warns, choose **More info → Run anyway**.
+Or download the `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X) zip, extract, and run `clean_mind.exe`. If SmartScreen warns: **More info → Run anyway**.
 
 **Linux — Debian/Ubuntu/Kali/Mint:**
 
@@ -104,9 +102,9 @@ Or download the zip for your CPU (`windows-x64` for Intel/AMD, `windows-arm64` f
 sudo apt install ./clean-mind_<version>_amd64.deb   # or _arm64.deb
 ```
 
-Other distros: grab the tarball for your CPU (`linux-x64`, or `linux-arm64` for Raspberry Pi 5, Ampere, and Arm laptops), extract, and either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root). Requires GTK 3.
+Other distros: extract the `linux-x64` or `linux-arm64` tarball and run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root), or launch `./clean-mind/clean_mind` directly. Requires GTK 3.
 
-All three platforms are tested and supported — bug reports are welcome everywhere, and especially appreciated from less common setups.
+All three platforms are tested and supported — bug reports are welcome everywhere.
 
 ## Performance
 
