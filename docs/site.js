@@ -1,20 +1,21 @@
-/* Clean Mind — site interactions
-   - copy-to-clipboard
-   - sticky-nav state, scroll reveals
-   - resolve download links from the latest GitHub release
-   - draw the flat 2D treemap only when the 3D skyline falls back */
+/* Clean Mind — document interactions.
+   The page is the conductor: it computes scroll progress for §02 and
+   dispatches "figure:progress"; figure.js only draws what it's told. */
 
 (function () {
   "use strict";
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const REPO = "MS-Teja/clean-mind";
-  const RELEASES = "https://github.com/" + REPO + "/releases/latest";
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
-  /* ---------------- Copy to clipboard ---------------- */
-  document.querySelectorAll("[data-copy]").forEach((btn) => {
+  /* ---------------- Copy buttons ---------------- */
+  document.querySelectorAll(".copy").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const text = btn.getAttribute("data-copy");
+      const cmd = btn.closest(".cmd");
+      const text = btn.getAttribute("data-copy") ||
+        (cmd && cmd.querySelector("code") ? cmd.querySelector("code").textContent : "");
       try {
         await navigator.clipboard.writeText(text);
       } catch (e) {
@@ -24,43 +25,138 @@
         try { document.execCommand("copy"); } catch (_) {}
         document.body.removeChild(ta);
       }
-      const label = btn.querySelector(".label");
-      const original = label ? label.textContent : btn.textContent;
       btn.classList.add("copied");
-      if (label) label.textContent = "Copied"; else btn.textContent = "Copied";
-      setTimeout(() => {
-        btn.classList.remove("copied");
-        if (label) label.textContent = original; else btn.textContent = original;
-      }, 1600);
+      const prev = btn.textContent;
+      btn.textContent = "copied";
+      setTimeout(() => { btn.classList.remove("copied"); btn.textContent = prev; }, 1500);
     });
   });
 
-  /* ---------------- Sticky nav shadow ---------------- */
-  const nav = document.getElementById("nav");
-  const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
-  onScroll();
-  window.addEventListener("scroll", onScroll, { passive: true });
-
-  /* ---------------- Scroll reveals ---------------- */
+  /* ---------------- Reveals ---------------- */
   const reveals = document.querySelectorAll(".reveal");
   if (reduceMotion || !("IntersectionObserver" in window)) {
     reveals.forEach((el) => el.classList.add("in"));
   } else {
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) { entry.target.classList.add("in"); io.unobserve(entry.target); }
-        });
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
-    );
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -6% 0px" });
     reveals.forEach((el) => io.observe(el));
   }
 
-  /* ---------------- Resolve downloads from the latest release ----------------
-     Assets are CleanMind-<ver>-macos.dmg / -windows-x64.zip / -linux-x64.tar.gz.
-     Buttons default to the releases page; we upgrade them to direct links plus
-     live version + size. Any failure just leaves the safe defaults. */
+  /* ---------------- Masthead file counter ---------------- */
+  const counter = document.getElementById("file-counter");
+  if (counter && !reduceMotion) {
+    const target = parseInt(counter.getAttribute("data-target"), 10) || 0;
+    const t0 = performance.now(), dur = 1500;
+    (function tick(now) {
+      const t = clamp01((now - t0) / dur);
+      counter.textContent = Math.round(easeOut(t) * target).toLocaleString("en-US");
+      if (t < 1) requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  /* ---------------- §02 — scroll drives the figure ---------------- */
+  const runway = document.getElementById("runway");
+  const steps = Array.from(document.querySelectorAll(".step"));
+  const railDots = Array.from(document.querySelectorAll(".step-rail li"));
+  const reclaim = document.getElementById("reclaim-counter");
+  const reclaimMb = document.getElementById("reclaim-mb");
+  const RECLAIM_TOTAL = 519;
+
+  let lastP = -1;
+  function onScroll() {
+    if (!runway) return;
+    const rect = runway.getBoundingClientRect();
+    const span = runway.offsetHeight - window.innerHeight;
+    let p = span > 0 ? clamp01(-rect.top / span) : 0;
+
+    // reduced motion: discrete states, no scrubbed tweening
+    if (reduceMotion) p = (Math.min(3, Math.floor(p * 4)) + 0.5) / 4;
+    if (p === lastP) return;
+    lastP = p;
+
+    document.dispatchEvent(new CustomEvent("figure:progress", { detail: { p } }));
+
+    const u = p * 4;
+    const seg = Math.min(3, Math.floor(u));
+    steps.forEach((el, i) => el.classList.toggle("is-active", i === seg));
+    railDots.forEach((el, i) => el.classList.toggle("is-active", i === seg));
+
+    if (reclaim) {
+      const cleanT = clamp01(u - 3);
+      const show = u >= 3.02;
+      reclaim.hidden = !show;
+      if (show && reclaimMb) {
+        reclaimMb.textContent = "+" + Math.round(easeOut(cleanT) * RECLAIM_TOTAL);
+      }
+    }
+  }
+  let ticking = false;
+  window.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; onScroll(); });
+  }, { passive: true });
+  window.addEventListener("load", onScroll);
+  onScroll();
+
+  /* ---------------- Figure fallback (no WebGL) ---------------- */
+  document.addEventListener("figure:fallback", () => {
+    const fb = document.getElementById("fig-fallback");
+    const hero = document.getElementById("axo-hero");
+    if (!fb || !hero) return;
+    const svg = hero.cloneNode(true);
+    svg.removeAttribute("id");
+    const pat = svg.querySelector("pattern"); if (pat) pat.removeAttribute("id");
+    fb.appendChild(svg);
+    fb.hidden = false;
+    // mirror the chapter on the static figure
+    const setState = () => {
+      const seg = Math.min(3, Math.floor(clamp01(lastP) * 4));
+      fb.className = "fig-fallback st-" + seg;
+    };
+    document.addEventListener("figure:progress", setState);
+    setState();
+  });
+
+  /* ---------------- §04 — pseudonymization flip ---------------- */
+  const ledger = document.getElementById("ledger");
+  if (ledger && !reduceMotion && "IntersectionObserver" in window) {
+    const GLYPHS = "abcdefghijklmnopqrstuvwxyz0123456789-_/";
+    const scramble = (el) => {
+      const final = el.getAttribute("data-final") || el.textContent;
+      const t0 = performance.now(), dur = 900;
+      (function frame(now) {
+        const t = clamp01((now - t0) / dur);
+        const settled = Math.floor(t * final.length);
+        let out = final.slice(0, settled);
+        for (let i = settled; i < final.length; i++) {
+          const ch = final[i];
+          out += (ch === "/" || ch === "-") ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+        }
+        el.textContent = out;
+        if (t < 1) requestAnimationFrame(frame); else el.textContent = final;
+      })(t0);
+    };
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        io.disconnect();
+        ledger.querySelectorAll(".pseudo").forEach((el, i) => {
+          setTimeout(() => scramble(el), i * 220);
+        });
+      });
+    }, { threshold: 0.5 });
+    io.observe(ledger);
+  }
+
+  /* ---------------- §06 — ticker loop ---------------- */
+  const track = document.getElementById("ticker-track");
+  if (track) track.innerHTML += track.innerHTML; /* duplicate once → seamless -50% loop */
+
+  /* ---------------- Appendix A — resolve the latest release ---------------- */
   function humanSize(bytes) {
     if (!bytes && bytes !== 0) return "";
     const mb = bytes / (1024 * 1024);
@@ -73,141 +169,25 @@
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((rel) => {
       const ver = (rel.tag_name || rel.name || "").trim();
-      if (ver) {
-        document.querySelectorAll("[data-ver]").forEach((el) => { el.textContent = ver; });
-      }
+      if (ver) document.querySelectorAll("[data-ver]").forEach((el) => { el.textContent = ver; });
       const assets = rel.assets || [];
-      const pick = (needle, ext) =>
-        assets.find((a) => a.name.includes(needle) && a.name.endsWith(ext));
-      const byOs = {
-        mac: pick("macos", ".dmg"),
-        windows: pick("windows", ".zip"),
-        linux: pick("linux", ".tar.gz"),
+      const find = (fn) => assets.find((a) => fn(a.name));
+      const matched = {
+        "dmg":       find((n) => n.endsWith(".dmg")),
+        "win-x64":   find((n) => n.includes("windows-x64") && n.endsWith(".zip")),
+        "win-arm64": find((n) => n.includes("windows-arm64") && n.endsWith(".zip")),
+        "deb-amd64": find((n) => n.endsWith("amd64.deb")),
+        "deb-arm64": find((n) => n.endsWith("arm64.deb")),
+        "tgz-x64":   find((n) => n.includes("linux-x64") && n.endsWith(".tar.gz")),
+        "tgz-arm64": find((n) => n.includes("linux-arm64") && n.endsWith(".tar.gz")),
       };
-      Object.keys(byOs).forEach((os) => {
-        const asset = byOs[os];
-        if (!asset) return;
-        document.querySelectorAll('[data-dl="' + os + '"]').forEach((a) => {
-          a.href = asset.browser_download_url;
-        });
-        const size = humanSize(asset.size);
-        document.querySelectorAll('[data-size="' + os + '"]').forEach((el) => {
-          el.textContent = size;
-        });
+      Object.keys(matched).forEach((key) => {
+        const a = matched[key];
+        if (!a) return;
+        document.querySelectorAll('[data-dl="' + key + '"]').forEach((el) => { el.href = a.browser_download_url; });
+        document.querySelectorAll('[data-size="' + key + '"]').forEach((el) => { el.textContent = humanSize(a.size); });
+        document.querySelectorAll('[data-name="' + key + '"]').forEach((el) => { el.textContent = a.name; });
       });
     })
-    .catch(() => { /* keep the releases-page fallbacks already in the markup */ });
-
-  /* ---------------- Flat 2D treemap (only if the 3D skyline can't run) ----------------
-     scene.js dispatches "skyline:fallback" when WebGL/motion is unavailable. */
-  let drawn = false;
-  function drawFallbackTreemap() {
-    if (drawn) return;
-    const canvas = document.getElementById("treemap");
-    if (!canvas) return;
-    drawn = true;
-    const ctx = canvas.getContext("2d");
-
-    const items = [
-      { label: "target", mb: 222, tier: "safe" },
-      { label: "node_modules", mb: 138, tier: "safe" },
-      { label: ".venv", mb: 101, tier: "safe" },
-      { label: ".next", mb: 48, tier: "safe" },
-      { label: "Photos", mb: 22, tier: "protected" },
-      { label: "src", mb: 14, tier: "folder" },
-      { label: ".ssh", mb: 6, tier: "protected" },
-      { label: "docs", mb: 4, tier: "file" },
-    ];
-    const COLORS = { safe: "#2fd695", protected: "#3a423e", folder: "#3d5148", file: "#32424e" };
-    const INK = "#e9efeb", INK_ON_SAFE = "#04231a";
-
-    function squarify(data, x, y, w, h) {
-      const total = data.reduce((s, d) => s + d.mb, 0);
-      const scale = (w * h) / total;
-      const nodes = data.map((d) => ({ ...d, area: d.mb * scale }));
-      const rects = [];
-      let rx = x, ry = y, rw = w, rh = h, row = [];
-      const worst = (row, len) => {
-        if (!row.length) return Infinity;
-        const s = row.reduce((a, r) => a + r.area, 0);
-        const mx = Math.max(...row.map((r) => r.area)), mn = Math.min(...row.map((r) => r.area));
-        const s2 = s * s, l2 = len * len;
-        return Math.max((l2 * mx) / s2, s2 / (l2 * mn));
-      };
-      let i = 0;
-      while (i < nodes.length) {
-        const shortest = Math.min(rw, rh), next = nodes[i];
-        if (row.length === 0 || worst([...row, next], shortest) <= worst(row, shortest)) { row.push(next); i++; }
-        else { layoutRow(row); row = []; }
-      }
-      if (row.length) layoutRow(row);
-      return rects;
-      function layoutRow(row) {
-        const s = row.reduce((a, r) => a + r.area, 0);
-        if (rw >= rh) {
-          const rowW = s / rh; let oy = ry;
-          row.forEach((r) => { const rh2 = r.area / rowW; rects.push({ ...r, x: rx, y: oy, w: rowW, h: rh2 }); oy += rh2; });
-          rx += rowW; rw -= rowW;
-        } else {
-          const rowH = s / rw; let ox = rx;
-          row.forEach((r) => { const rw2 = r.area / rowH; rects.push({ ...r, x: ox, y: ry, w: rw2, h: rowH }); ox += rw2; });
-          ry += rowH; rh -= rowH;
-        }
-      }
-    }
-
-    function roundRect(x, y, w, h, r) {
-      r = Math.min(r, w / 2, h / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-
-    let rects = [], W = 0, H = 0;
-    function layout() {
-      const box = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = box.width; H = box.height;
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      rects = squarify(items, 6, 6, W - 12, H - 12);
-    }
-    function render() {
-      ctx.clearRect(0, 0, W, H);
-      const gap = 3;
-      rects.forEach((r) => {
-        const x = r.x + gap, y = r.y + gap, w = Math.max(0, r.w - gap * 2), h = Math.max(0, r.h - gap * 2);
-        if (w <= 0 || h <= 0) return;
-        roundRect(x, y, w, h, 7);
-        ctx.fillStyle = COLORS[r.tier] || COLORS.folder; ctx.fill();
-        const onSafe = r.tier === "safe";
-        if (w > 78 && h > 40) {
-          ctx.fillStyle = onSafe ? INK_ON_SAFE : INK;
-          ctx.font = '600 13px "Space Grotesk", sans-serif';
-          ctx.textBaseline = "top";
-          ctx.fillText(r.label, x + 11, y + 10, w - 20);
-          ctx.font = '500 11px "JetBrains Mono", monospace';
-          ctx.fillStyle = onSafe ? "rgba(4,35,26,0.72)" : "rgba(233,239,235,0.6)";
-          ctx.fillText(r.mb + " MB", x + 11, y + 28, w - 20);
-        } else if (r.tier === "protected" && w > 24 && h > 24) {
-          ctx.fillStyle = "rgba(233,239,235,0.5)";
-          ctx.font = '600 12px "JetBrains Mono", monospace';
-          ctx.fillText("🔒", x + w / 2 - 8, y + h / 2 - 8);
-        }
-      });
-    }
-    function go() { layout(); render(); }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
-    let t;
-    window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(go, 120); });
-  }
-
-  document.addEventListener("skyline:fallback", drawFallbackTreemap);
-  // safety: if the fallback is already visible (e.g. no module support), draw it
-  const fb = document.getElementById("skyline-fallback");
-  if (fb && !fb.hidden) drawFallbackTreemap();
+    .catch(() => { /* markup already points at the releases page */ });
 })();

@@ -3,442 +3,431 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clean Mind — a disk analyzer that knows what's safe to delete</title>
-  <meta name="description" content="Clean Mind is an open-source, cross-platform disk usage analyzer built for developers. It finds developer bloat — node_modules, build artifacts, package caches — explains why each item is safe, and classifies everything by how it regenerates." />
-  <meta name="theme-color" content="#0b0f0d" />
+  <title>Clean Mind — reclaim your disk, safely</title>
+  <meta name="description" content="Clean Mind is a free, open-source disk analyzer for developers. It recognizes regenerable junk — node_modules, build caches, .venvs — explains why each item is safe to delete, and shows the exact command that rebuilds it. Private by design: no telemetry, no account, AI strictly opt-in." />
+  <meta name="theme-color" content="#fafaf7" />
   <link rel="icon" type="image/png" href="logo.png" />
   <link rel="apple-touch-icon" href="logo.png" />
 
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Clean Mind — see what fills your disk, and what's safe to reclaim" />
-  <meta property="og:description" content="An open-source disk analyzer built for developers. It recognizes node_modules, build artifacts and package caches, tells you why each is safe, and moves them to the Trash — never automatically." />
+  <meta property="og:title" content="Clean Mind — reclaim your disk, safely" />
+  <meta property="og:description" content="A free, open-source disk analyzer that understands a developer's disk. It finds regenerable junk, tells you why it's safe to delete, and shows the command to get it back. No telemetry, no account." />
   <meta property="og:image" content="screenshot-treemap.png" />
   <meta name="twitter:card" content="summary_large_image" />
 
+  <link rel="preload" href="fonts/SpaceGrotesk-Bold.ttf" as="font" type="font/ttf" crossorigin />
+  <link rel="preload" href="fonts/JetBrainsMono-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="styles.css" />
   <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-  <div class="grain" aria-hidden="true"></div>
 
-  <!-- ===================== NAV ===================== -->
-  <header class="nav" id="nav">
-    <div class="wrap nav-inner">
-      <a class="brand" href="#top" aria-label="Clean Mind home">
-        <img src="logo.png" alt="" />
-        <span>Clean Mind</span>
-      </a>
-      <nav class="nav-links" aria-label="Primary">
-        <a href="#features">Features</a>
-        <a href="#how">How it works</a>
-        <a href="#trust">Trust model</a>
-        <a href="#download">Download</a>
+  <a class="skip mono" href="#main">Skip to content</a>
+
+  <!-- ============ RUNNING HEAD ============ -->
+  <header class="running-head" id="running-head">
+    <div class="rh-inner">
+      <a class="rh-brand" href="#top">Clean&nbsp;Mind</a>
+      <nav class="rh-nav mono" aria-label="Document sections">
+        <a href="#method">§02&nbsp;Method</a>
+        <a href="#trust">§03&nbsp;Trust</a>
+        <a href="#privacy">§04&nbsp;Privacy</a>
+        <a href="#download">Appendix&nbsp;A</a>
+        <a href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">GitHub&nbsp;↗</a>
       </nav>
-      <a class="nav-cta" href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2c-3.34.72-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.77-1.34-1.77-1.1-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.84 2.8 1.3 3.49.99.11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.32.47-2.39 1.24-3.23-.13-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"/></svg>
-        <span>GitHub</span>
-      </a>
+      <span class="rh-ver mono" data-ver>v1.2.0</span>
     </div>
   </header>
 
+  <main id="main">
   <a id="top"></a>
 
-  <!-- ===================== HERO ===================== -->
-  <section class="hero">
-    <div class="hero-rings" aria-hidden="true"><span></span><span></span><span></span></div>
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow reveal-line">Open source · macOS · Linux · Windows</p>
-        <h1><span class="h1-inner">See what fills your disk — and what's <em>safe to reclaim</em>.</span></h1>
-        <p class="lede reveal-line">A disk analyzer that recognizes developer bloat — <code>node_modules</code>, build artifacts, package caches — and tells you exactly why each one can go.</p>
+  <!-- ============ TITLE BLOCK ============ -->
+  <section class="masthead">
+    <div class="page">
+      <p class="meta-row mono" role="doc-subtitle">
+        <span>Clean&nbsp;Mind</span><span aria-hidden="true">·</span>
+        <span data-ver>v1.2.0</span><span aria-hidden="true">·</span>
+        <span>Apache-2.0</span><span aria-hidden="true">·</span>
+        <span>macOS&nbsp;/&nbsp;Linux&nbsp;/&nbsp;Windows</span><span aria-hidden="true">·</span>
+        <span>no&nbsp;telemetry</span>
+      </p>
 
-        <div class="hero-cta reveal-line">
-          <div class="install-cmd" role="group" aria-label="Homebrew install command">
-            <span class="prompt" aria-hidden="true">$</span>
-            <code>brew install --cask MS-Teja/clean-mind/clean-mind</code>
-            <button type="button" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind" aria-label="Copy install command">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span class="label">Copy</span>
-            </button>
-          </div>
-        </div>
-        <div class="hero-cta reveal-line" style="margin-top:16px">
-          <a class="btn btn-primary" href="#download">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-            Download free
-          </a>
-          <a class="btn btn-ghost" href="#how">See how it works</a>
-        </div>
+      <div class="mast-grid">
+        <div class="mast-copy">
+          <h1 class="poster">Reclaim your&nbsp;disk, <em>safely.</em></h1>
+          <p class="abstract"><span class="mono abstract-tag">Abstract&nbsp;—&nbsp;</span>A free, open-source disk analyzer for developers. It doesn't just chart your disk — it recognizes regenerable junk (<code>node_modules</code>, build caches, <code>.venv</code>s), explains why each item is safe to delete, and shows the exact command that rebuilds it.</p>
 
-        <div class="hero-meta reveal-line">
-          <span><i class="dot"></i> Apache-2.0</span>
-          <span><i class="dot"></i> No telemetry, no account</span>
-          <span><i class="dot"></i> Trash-first, never automatic</span>
-        </div>
-      </div>
-
-      <!-- 3D disk skyline (falls back to the flat treemap) -->
-      <div class="hero-visual">
-        <div class="skyline-stage">
-          <div class="sky-glow" aria-hidden="true"></div>
-          <canvas id="skyline" aria-label="An interactive 3D map of a disk: each folder is a block sized by the space it uses, with reclaimable folders glowing mint green."></canvas>
-
-          <div id="skyline-fallback" hidden>
-            <div class="map-card">
-              <div class="titlebar">
-                <div class="tl-dots"><i></i><i></i><i></i></div>
-                <span class="tl-title">Clean Mind — ~/Projects</span>
-                <span class="tl-reclaim">519 MB reclaimable</span>
-              </div>
-              <div class="map-canvas-wrap"><canvas id="treemap"></canvas></div>
-            </div>
-          </div>
-
-          <div class="sky-legend">
-            <span><i style="background:#33463d"></i> Folder</span>
-            <span><i style="background:#2b3a44"></i> File</span>
-            <span><i style="background:var(--safe)"></i> Safe to reclaim</span>
-            <span><i style="background:var(--protected)"></i> Protected</span>
-          </div>
-        </div>
-        <p class="sky-hint" aria-hidden="true">Hover any block to inspect it — no drag needed</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== REGENERABILITY BAND ===================== -->
-  <section class="band">
-    <div class="wrap regen-quote reveal">
-      <p class="eyebrow">The idea</p>
-      <h2>Most of a developer's wasted space is <span class="safe">regenerable</span>. Clean Mind knows which — and shows you the <span class="cmd">↻ command</span> that rebuilds it.</h2>
-    </div>
-  </section>
-
-  <!-- ===================== FEATURES ===================== -->
-  <section id="features">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">Why Clean Mind</p>
-        <h2>A cleaner that understands developer machines.</h2>
-        <p>Beyond showing <em>what</em> takes space, it explains <em>why</em> each item is safe — and gives color to meaning, not decoration.</p>
-      </div>
-
-      <div class="features">
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="10" rx="1"/><rect x="13" y="3" width="8" height="6" rx="1"/><rect x="13" y="11" width="8" height="10" rx="1"/><rect x="3" y="15" width="8" height="6" rx="1"/></svg></div>
-          <h3>A treemap that makes sense</h3>
-          <p>A squarified, drill-down map with breadcrumbs and tier-colored badges — the biggest space hogs are the biggest tiles.</p>
-        </div>
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0V6.5"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 5 0V6.5"/></svg></div>
-          <h3>It knows developer junk</h3>
-          <p>A deterministic rules engine recognizes <code>node_modules</code>, cargo <code>target/</code>, DerivedData, package caches and more across six ecosystems — and tells you how each regenerates.</p>
-        </div>
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4Z"/></svg></div>
-          <h3>Safe by construction</h3>
-          <p>A three-tier model, a hard denylist nothing can override, and Trash-first deletion. Permanent delete lives behind a type-to-confirm gate. Nothing is ever deleted automatically.</p>
-        </div>
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></svg></div>
-          <h3>AI on your terms</h3>
-          <p>Bring your own Anthropic or OpenAI-compatible key, or run a local model via Ollama. It only ever sees directory <em>metadata</em> — and can never promote something to "safe" on its own.</p>
-        </div>
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-          <h3>Private &amp; offline by default</h3>
-          <p>No telemetry, no account, no bundled inference. Fresh scan each launch — nothing cached, nothing running in the background.</p>
-        </div>
-        <div class="feature reveal">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></div>
-          <h3>Native and fast</h3>
-          <p>A parallel Rust core — hardlink-aware and APFS-clone-aware — under a Flutter UI. It walks your home directory and builds a size map in seconds.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== SCREENSHOTS ===================== -->
-  <section id="screens">
-    <div class="wrap">
-      <div class="shot">
-        <div class="shot-copy reveal">
-          <p class="eyebrow">The map</p>
-          <h3>Every tile sized by the space it takes.</h3>
-          <p>An interactive treemap turns an abstract number into terrain you can read at a glance. Green tiles are confirmed safe to reclaim; a running total sits in the header.</p>
-          <ul>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> Drill down with breadcrumbs; double-click any tile to zoom in.</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> Tier-colored badges mark what's reclaimable and what's protected.</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> Reveal in Finder, or move straight to Trash.</li>
-          </ul>
-        </div>
-        <div class="shot-frame reveal">
-          <img src="screenshot-treemap.png" alt="Clean Mind's treemap view: folders sized as tiles, with build artifacts highlighted in green as safe to reclaim, and a detail panel showing 555 MB across 11 files and 11 folders." loading="lazy" />
-        </div>
-      </div>
-
-      <div class="shot flip">
-        <div class="shot-copy reveal">
-          <p class="eyebrow">The reasoning</p>
-          <h3>For each item: why it's safe, and how it comes back.</h3>
-          <p>The insights panel groups reclaimable items by kind, and for every one explains what it is, what deleting it costs you, and the exact command that regenerates it.</p>
-          <ul>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> <span><code style="font-family:var(--mono);font-size:.9em">cargo build</code>, <code style="font-family:var(--mono);font-size:.9em">npm install</code> — the rebuild command, spelled out.</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> Optional AI pass sends folder names and sizes — never contents.</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg> Select what you trust; nothing is one-click unless a rule verified it.</li>
-          </ul>
-        </div>
-        <div class="shot-frame reveal">
-          <img src="screenshot-insights.png" alt="Clean Mind's insights panel: reclaimable items like a Cargo build directory (222 MB) and Node.js dependencies (138 MB), each with an explanation of why it's safe and the command that regenerates it." loading="lazy" />
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== HOW IT WORKS ===================== -->
-  <section id="how" class="band">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">How it works</p>
-        <h2>Five steps, from full disk to reclaimed space.</h2>
-      </div>
-      <div class="pipeline reveal">
-        <div class="step">
-          <div class="num">01 · SCAN</div>
-          <h4>Scan</h4>
-          <p>A parallel Rust scanner walks your home directory and builds a size map. Fresh every launch.</p>
-          <svg class="connector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </div>
-        <div class="step">
-          <div class="num">02 · SEE</div>
-          <h4>Understand</h4>
-          <p>An interactive treemap shows where the space actually went.</p>
-          <svg class="connector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </div>
-        <div class="step">
-          <div class="num">03 · SORT</div>
-          <h4>Classify</h4>
-          <p>The rules engine recognizes known artifacts and marks them by how safely they regenerate.</p>
-          <svg class="connector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </div>
-        <div class="step">
-          <div class="num">04 · ASK</div>
-          <h4>Ask (optional)</h4>
-          <p>An LLM you configure reviews metadata-only summaries of your largest directories.</p>
-          <svg class="connector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </div>
-        <div class="step">
-          <div class="num">05 · CLEAN</div>
-          <h4>Clean</h4>
-          <p>Deletions go to the OS Trash by default and stay recoverable. Permanent delete is gated.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== TRUST MODEL ===================== -->
-  <section id="trust">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">The trust model</p>
-        <h2>The LLM is never trusted on its own.</h2>
-        <p>Everything Clean Mind finds lands in one of three tiers. Color carries meaning here — and protected items always pair with a lock, so meaning is never carried by color alone.</p>
-      </div>
-      <div class="tiers">
-        <div class="tier tier-safe reveal">
-          <div class="stripe"></div>
-          <div class="tier-body">
-            <span class="tier-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> Tier 1</span>
-            <h3>Safe · regenerable</h3>
-            <p>Only items <em>confirmed by the rules engine</em> — like <code>node_modules</code> next to a <code>package.json</code>. Fully reproducible.</p>
-            <span class="action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> One-click reclaim to Trash</span>
-          </div>
-        </div>
-        <div class="tier tier-review reveal">
-          <div class="stripe"></div>
-          <div class="tier-body">
-            <span class="tier-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Tier 2</span>
-            <h3>Review</h3>
-            <p>LLM suggestions that no rule verifies. Always shown with reasoning — <em>never</em> one-click, and never deleted automatically.</p>
-            <span class="action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Human confirms every item</span>
-          </div>
-        </div>
-        <div class="tier tier-protected reveal">
-          <div class="stripe"></div>
-          <div class="tier-body">
-            <span class="tier-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Tier 3</span>
-            <h3>Protected</h3>
-            <p>A hard-coded denylist — documents, photos, <code>.ssh</code>, system paths — that neither the rules nor the LLM can override.</p>
-            <span class="action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Never selectable for deletion</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== PRIVACY / AI ===================== -->
-  <section id="privacy">
-    <div class="wrap">
-      <div class="privacy reveal">
-        <div>
-          <p class="eyebrow">Privacy</p>
-          <h2>AI is opt-in, and kept on a short leash.</h2>
-          <p>The optional analysis pass is the only thing that ever leaves your machine — and it's built so it can't leak your files or overrule the safety model.</p>
-        </div>
-        <ul class="privacy-list">
-          <li>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
-            <div><b>Metadata only</b><span>Paths, sizes and timestamps — never file contents.</span></div>
-          </li>
-          <li>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4Z"/></svg>
-            <div><b>Optional redaction</b><span>Pseudonymize path names under your home before anything leaves.</span></div>
-          </li>
-          <li>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <div><b>Keys in the keychain</b><span>API keys live in your OS keychain, not in config files.</span></div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== DOWNLOAD ===================== -->
-  <section id="download" class="band">
-    <div class="wrap">
-      <div class="section-head center reveal">
-        <p class="eyebrow">Download</p>
-        <h2>Get Clean Mind <span data-ver class="ver-pill">free</span></h2>
-        <p>macOS is the primary, best-tested platform. Linux and Windows build and pass CI, but have had less real-world use — bug reports are especially welcome.</p>
-      </div>
-
-      <div class="dl-grid">
-        <!-- macOS: Homebrew first -->
-        <article class="dl-card reveal" data-os="mac">
-          <div class="dl-top">
-            <div class="dl-os">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2 1.6-3 1.7-3-.9-1.4-2.4-1.5-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.2 2-1.4 2.4-.4 6 1 8 .7 1 1.4 2 2.4 2 1 0 1.3-.6 2.5-.6s1.5.6 2.5.6c1 0 1.7-.9 2.4-1.9.7-1.1 1-2.1 1-2.2-.1 0-1.9-.7-1.9-2.8zM14.5 5.9c.5-.6.9-1.5.8-2.4-.8 0-1.7.5-2.2 1.2-.5.5-.9 1.5-.8 2.3.9.1 1.8-.4 2.2-1.1z"/></svg>
-              <div><h3>macOS</h3><span class="dl-sub">Apple silicon &amp; Intel · macOS 12+</span></div>
-            </div>
-          </div>
-          <div class="dl-body">
-            <p class="dl-lead">Recommended — Homebrew installs and opens like any other app, with no Gatekeeper prompts.</p>
-            <div class="code-block">
-              <span class="prompt">$</span>
+          <div class="cmd-strip">
+            <div class="cmd mono">
+              <span class="cmd-prompt" aria-hidden="true">$</span>
               <code>brew install --cask MS-Teja/clean-mind/clean-mind</code>
-              <button type="button" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind">Copy</button>
+              <button type="button" class="copy mono" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind" aria-label="Copy the Homebrew install command">copy</button>
             </div>
-            <a class="dl-secondary" data-dl="mac" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-              <span>Or download the <b>.dmg</b></span>
-              <span class="dl-size" data-size="mac"></span>
-            </a>
-            <p class="dl-note">Unsigned (no paid Apple account): with the DMG, first launch needs <b>right-click → Open</b>, or <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</p>
+            <a class="cmd-alt mono" href="#download">Appendix A — Windows, Linux &amp; direct downloads&nbsp;↓</a>
+          </div>
+        </div>
+
+        <figure class="mast-fig">
+          <svg class="axo" id="axo-hero" viewBox="0 0 641 511" role="img" aria-label="Axonometric treemap of a sample project folder: each block is sized by disk usage; mint blocks are verified safe to reclaim; hatched blocks are protected.">
+            <defs>
+              <pattern id="hatch" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="7" class="hatch-line" />
+              </pattern>
+            </defs>
+            <polygon class="ground" points="261.6,145.0 614.9,349.0 379.3,485.0 26.0,281.0"/>
+            <g class="blk t-safe" data-item="target">
+              <polygon class="f-e" points="384.9,102.0 384.9,221.0 157.6,352.2 157.6,233.2"/>
+              <polygon class="f-s" points="34.2,162.0 157.6,233.2 157.6,352.2 34.2,281.0"/>
+              <polygon class="f-t" points="261.6,30.8 384.9,102.0 157.6,233.2 34.2,162.0"/>
+            </g>
+            <g class="blk t-safe" data-item="node_modules">
+              <polygon class="f-e" points="513.0,197.5 513.0,294.9 370.7,377.1 370.7,279.6"/>
+              <polygon class="f-s" points="250.9,210.5 370.7,279.6 370.7,377.1 250.9,307.9"/>
+              <polygon class="f-t" points="393.2,128.3 513.0,197.5 370.7,279.6 250.9,210.5"/>
+            </g>
+            <g class="blk t-safe" data-item="venv">
+              <polygon class="f-e" points="606.7,263.2 606.7,349.0 464.4,431.1 464.4,345.3"/>
+              <polygon class="f-s" points="378.9,296.0 464.4,345.3 464.4,431.1 378.9,381.8"/>
+              <polygon class="f-t" points="521.2,213.9 606.7,263.2 464.4,345.3 378.9,296.0"/>
+            </g>
+            <g class="blk t-safe" data-item="next">
+              <polygon class="f-e" points="313.2,289.0 313.2,353.4 236.4,397.7 236.4,333.3"/>
+              <polygon class="f-s" points="165.9,292.6 236.4,333.3 236.4,397.7 165.9,357.0"/>
+              <polygon class="f-t" points="242.6,248.2 313.2,289.0 236.4,333.3 165.9,292.6"/>
+            </g>
+            <g class="blk t-review" data-item="downloads">
+              <polygon class="f-e" points="364.1,327.7 364.1,382.8 287.4,427.1 287.4,372.0"/>
+              <polygon class="f-s" points="244.7,347.4 287.4,372.0 287.4,427.1 244.7,402.5"/>
+              <polygon class="f-t" points="321.5,303.1 364.1,327.7 287.4,372.0 244.7,347.4"/>
+            </g>
+            <g class="blk t-protected" data-item="photos">
+              <polygon class="f-e" points="423.3,367.8 423.3,416.9 379.6,442.2 379.6,393.1"/>
+              <polygon class="f-s" points="328.7,363.7 379.6,393.1 379.6,442.2 328.7,412.8"/>
+              <polygon class="f-t" points="372.4,338.5 423.3,367.8 379.6,393.1 328.7,363.7"/>
+              <polygon class="f-hatch" points="372.4,338.5 423.3,367.8 379.6,393.1 328.7,363.7"/>
+            </g>
+            <g class="blk t-plain" data-item="src">
+              <polygon class="f-e" points="371.3,404.3 371.3,446.9 346.5,461.3 346.5,418.7"/>
+              <polygon class="f-s" points="295.6,389.3 346.5,418.7 346.5,461.3 295.6,431.9"/>
+              <polygon class="f-t" points="320.4,375.0 371.3,404.3 346.5,418.7 295.6,389.3"/>
+            </g>
+            <g class="blk t-safe" data-item="dist">
+              <polygon class="f-e" points="456.1,397.3 456.1,435.9 421.9,455.7 421.9,417.0"/>
+              <polygon class="f-s" points="397.2,402.8 421.9,417.0 421.9,455.7 397.2,441.5"/>
+              <polygon class="f-t" points="431.5,383.1 456.1,397.3 421.9,417.0 397.2,402.8"/>
+            </g>
+            <g class="blk t-protected" data-item="ssh">
+              <polygon class="f-e" points="413.6,426.7 413.6,460.5 396.3,470.4 396.3,436.7"/>
+              <polygon class="f-s" points="371.7,422.4 396.3,436.7 396.3,470.4 371.7,456.2"/>
+              <polygon class="f-t" points="389.0,412.5 413.6,426.7 396.3,436.7 371.7,422.4"/>
+              <polygon class="f-hatch" points="389.0,412.5 413.6,426.7 396.3,436.7 371.7,422.4"/>
+            </g>
+            <g class="blk t-plain" data-item="docs">
+              <polygon class="f-e" points="388.1,444.5 388.1,475.2 379.3,480.2 379.3,449.5"/>
+              <polygon class="f-s" points="354.7,435.3 379.3,449.5 379.3,480.2 354.7,466.0"/>
+              <polygon class="f-t" points="363.5,430.3 388.1,444.5 379.3,449.5 354.7,435.3"/>
+            </g>
+            <g class="axo-labels" aria-hidden="true">
+              <text class="lbl" x="209.6" y="122">target</text>
+              <text class="lbl-mb" x="209.6" y="139">222 MB</text>
+              <text class="lbl-cmd" x="209.6" y="156">↻ cargo build</text>
+              <text class="lbl" x="381.9" y="196">node_modules</text>
+              <text class="lbl-mb" x="381.9" y="213">138 MB</text>
+              <text class="lbl" x="492.8" y="272">.venv</text>
+              <text class="lbl-mb" x="492.8" y="289">101 MB</text>
+            </g>
+          </svg>
+          <figcaption class="mono">
+            <span class="fig-id">fig.&nbsp;01</span> — sample scan of <span class="path">~/Projects</span> ·
+            <span id="file-counter" data-target="1204335">1,204,335</span> files in 8.1&nbsp;s ·
+            <span class="key key-safe">■</span>&nbsp;safe to reclaim (519&nbsp;MB) ·
+            <span class="key key-prot">▨</span>&nbsp;protected
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ §01 THE PROBLEM ============ -->
+  <section class="sec" id="problem">
+    <header class="sec-head page">
+      <span class="sec-no mono">§01</span>
+      <h2 class="sec-title">The problem</h2>
+    </header>
+    <div class="page prose-grid">
+      <p class="editorial reveal">Storage fills up quietly — and the agentic-coding era made it worse. A few weeks of leaning on coding agents, and the disk-full warning arrives. You didn't download anything big. You'd just been <em>building</em>. Every cleaner shows you <i>where</i> the space went, then leaves you to guess whether deleting a folder will wreck a project. Clean&nbsp;Mind actually understands your disk.</p>
+      <aside class="margin-note mono reveal" aria-label="Sample scan statistics">
+        <span class="stat-big">519<small>&nbsp;MB</small></span>
+        <span class="stat-cap">verified safe to reclaim in the fig.&nbsp;01 sample — with the rebuild command for every item</span>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ §02 THE METHOD ============ -->
+  <section class="sec" id="method">
+    <header class="sec-head page">
+      <span class="sec-no mono">§02</span>
+      <h2 class="sec-title">The method</h2>
+      <span class="sec-side mono">fig. 02 — performed below</span>
+    </header>
+
+    <div class="runway" id="runway">
+      <div class="stage">
+        <div class="stage-grid page">
+          <div class="steps" id="steps">
+            <div class="step is-active" data-step="0">
+              <p class="fig-id mono">fig. 02a — <span class="mint">SCAN</span></p>
+              <h3>Walk the disk.</h3>
+              <p>A parallel Rust scanner walks any folder — or drag one in. Sizes are true on-disk sizes: hardlink-aware, APFS-clone-aware. About 1.2&nbsp;million files in ~8&nbsp;seconds.</p>
+            </div>
+            <div class="step" data-step="1">
+              <p class="fig-id mono">fig. 02b — <span class="mint">UNDERSTAND</span></p>
+              <h3>See where it went.</h3>
+              <p>The scan becomes a treemap you can read — every tile sized by the space it takes. Drill down with breadcrumbs, switch to a sortable list, or search the entire scan.</p>
+            </div>
+            <div class="step" data-step="2">
+              <p class="fig-id mono">fig. 02c — <span class="mint">CLASSIFY</span></p>
+              <h3>Mark what's safe.</h3>
+              <p>A deterministic rules engine recognizes developer artifacts — <code>node_modules</code> beside a <code>package.json</code>, cargo <code>target/</code>, DerivedData — and records how each one regenerates. The rules engine, not the AI, is the source of truth.</p>
+            </div>
+            <div class="step" data-step="3">
+              <p class="fig-id mono">fig. 02d — <span class="mint">CLEAN</span></p>
+              <h3>Reclaim to the Trash.</h3>
+              <p>One click sends verified-safe items to the OS Trash — recoverable, never automatic. Permanent deletion sits behind a type-to-confirm gate.</p>
+            </div>
+            <ol class="step-rail mono" aria-hidden="true">
+              <li class="is-active">02a</li><li>02b</li><li>02c</li><li>02d</li>
+            </ol>
+          </div>
+
+          <div class="fig3d" id="fig3d">
+            <canvas id="figure" aria-hidden="true"></canvas>
+            <div class="fig-labels" id="fig-labels" aria-hidden="true"></div>
+            <div class="fig-fallback" id="fig-fallback" hidden></div>
+            <p class="fig-counter mono" id="reclaim-counter" hidden><span id="reclaim-mb">+0</span>&nbsp;MB reclaimed → Trash</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ §03 THE TRUST MODEL ============ -->
+  <section class="sec" id="trust">
+    <header class="sec-head page">
+      <span class="sec-no mono">§03</span>
+      <h2 class="sec-title">The trust model</h2>
+    </header>
+    <div class="page">
+      <p class="sec-lede reveal">Everything the scan finds lands in one of three tiers. The AI is never trusted on its own.</p>
+
+      <div class="tier-table" role="table" aria-label="The three trust tiers">
+        <div class="tier-row t1 reveal" role="row">
+          <span class="tier-no mono" role="cell">T1</span>
+          <div class="tier-def" role="cell">
+            <h3>Safe · regenerable</h3>
+            <p>Confirmed by the rules engine — like <code>node_modules</code> next to a <code>package.json</code>. Fully reproducible, rebuild command included.</p>
+          </div>
+          <span class="tier-act mono" role="cell">one click → Trash</span>
+        </div>
+        <div class="tier-row t2 reveal" role="row">
+          <span class="tier-no mono" role="cell">T2</span>
+          <div class="tier-def" role="cell">
+            <h3>Review</h3>
+            <p>AI suggestions that no rule verifies. Always shown with reasoning — never one-click, never deleted automatically.</p>
+          </div>
+          <span class="tier-act mono" role="cell">human confirms each item</span>
+        </div>
+        <div class="tier-row t3 reveal" role="row">
+          <span class="tier-no mono" role="cell">T3</span>
+          <div class="tier-def" role="cell">
+            <h3>Protected</h3>
+            <p>A hard-coded denylist — documents, photos, <code>.ssh</code>, system paths — that neither the rules nor the AI can override.</p>
+          </div>
+          <span class="tier-act mono" role="cell">never selectable</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ §04 PRIVACY ============ -->
+  <section class="sec" id="privacy">
+    <header class="sec-head page">
+      <span class="sec-no mono">§04</span>
+      <h2 class="sec-title">Privacy</h2>
+    </header>
+    <div class="page">
+      <h3 class="poster-2 reveal">Private by design, <em>not by policy.</em></h3>
+      <p class="sec-lede reveal">Everything runs on your machine. The optional AI pass is the only thing that can leave it — and it's built so it can't leak your files. With pseudonymization on, it never even learns your folder names:</p>
+
+      <div class="ledger mono reveal" id="ledger">
+        <div class="ledger-head"><span>on your machine</span><span>what the AI sees</span></div>
+        <div class="ledger-row"><span class="real">~/Projects/wedding-site</span><span class="pseudo" data-final="dir-1">dir-1</span></div>
+        <div class="ledger-row"><span class="real">~/Projects/wedding-site/node_modules</span><span class="pseudo" data-final="dir-1/node_modules">dir-1/node_modules</span></div>
+        <div class="ledger-row"><span class="real">~/Documents/taxes-2025</span><span class="pseudo" data-final="dir-2">dir-2</span></div>
+        <p class="ledger-note">Structural names like <code>node_modules</code> stay readable. Mapping answers back to real paths happens locally.</p>
+      </div>
+
+      <div class="privacy-rows">
+        <div class="p-row reveal">
+          <span class="p-no mono">4.1</span>
+          <h4>Offline by default</h4>
+          <p>No telemetry, no account, no background service. Scan results live only in memory — fresh every launch.</p>
+        </div>
+        <div class="p-row reveal">
+          <span class="p-no mono">4.2</span>
+          <h4>AI on your terms</h4>
+          <p>Strictly opt-in. Bring your own Anthropic or OpenAI-compatible key, or run a local model with Ollama.</p>
+        </div>
+        <div class="p-row reveal">
+          <span class="p-no mono">4.3</span>
+          <h4>Metadata only</h4>
+          <p>The AI sees directory names, sizes and ages — never file contents.</p>
+        </div>
+        <div class="p-row reveal">
+          <span class="p-no mono">4.4</span>
+          <h4>Keys in the keychain</h4>
+          <p>API keys are stored in the OS keychain, not in config files.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ §05 PLATES ============ -->
+  <section class="sec" id="plates">
+    <header class="sec-head page">
+      <span class="sec-no mono">§05</span>
+      <h2 class="sec-title">Plates</h2>
+    </header>
+    <div class="page">
+      <figure class="plate reveal">
+        <img src="screenshot-treemap.png" alt="Clean Mind's treemap view: folders rendered as tiles sized by disk usage, with build artifacts highlighted in green as safe to reclaim, and a detail panel summarizing the selection." loading="lazy" />
+        <figcaption class="mono"><span class="fig-id">plate&nbsp;I</span> — the semantic treemap: green tiles are rules-verified safe to reclaim.</figcaption>
+      </figure>
+      <figure class="plate reveal">
+        <img src="screenshot-insights.png" alt="Clean Mind's insights panel: reclaimable items such as a Cargo build directory and Node.js dependencies, each with an explanation of why it is safe and the command that regenerates it." loading="lazy" />
+        <figcaption class="mono"><span class="fig-id">plate&nbsp;II</span> — the insights panel: why each item is safe, and the command that brings it back.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ §06 POSITIONING ============ -->
+  <section class="sec" id="positioning">
+    <header class="sec-head page">
+      <span class="sec-no mono">§06</span>
+      <h2 class="sec-title">In one line</h2>
+    </header>
+    <div class="page">
+      <p class="poster-2 wedge reveal">The DaisyDisk idea — <em>free</em>, <em>cross-platform</em>, and it actually understands a developer's&nbsp;disk.</p>
+    </div>
+    <div class="ticker mono" aria-hidden="true">
+      <div class="ticker-track" id="ticker-track">
+        <span>node_modules</span><span>target/</span><span>DerivedData</span><span>.venv</span><span>__pycache__</span><span>~/Library/Caches</span><span>.gradle</span><span>vcpkg</span><span>ccache</span><span>.next</span><span>Pods</span><span>go/pkg/mod</span><span>.nuget</span><span>dist/</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ §07 APPENDIX A — DOWNLOADS ============ -->
+  <section class="sec" id="download">
+    <header class="sec-head page">
+      <span class="sec-no mono">§07</span>
+      <h2 class="sec-title">Appendix A — downloads</h2>
+      <span class="sec-side mono"><span data-ver>v1.2.0</span> · free · Apache-2.0</span>
+    </header>
+    <div class="page">
+      <p class="sec-lede reveal">One native app on macOS, Linux and Windows — x64 and arm64, each with the right OS conventions (Trash vs Recycle Bin, per-platform volumes, long paths on Windows).</p>
+
+      <div class="dl-table">
+        <!-- macOS -->
+        <article class="dl-row reveal" id="dl-mac">
+          <div class="dl-os">
+            <h3>macOS</h3>
+            <p class="mono">12+ · universal<br/>Apple&nbsp;silicon&nbsp;&amp;&nbsp;Intel</p>
+          </div>
+          <div class="dl-main">
+            <p class="dl-rec mono">recommended — homebrew</p>
+            <div class="cmd mono">
+              <span class="cmd-prompt" aria-hidden="true">$</span>
+              <code>brew install --cask MS-Teja/clean-mind/clean-mind</code>
+              <button type="button" class="copy mono" data-copy="brew install --cask MS-Teja/clean-mind/clean-mind" aria-label="Copy the Homebrew install command">copy</button>
+            </div>
+            <p class="dl-alt mono">or the DMG:
+              <a data-dl="dmg" href="https://github.com/MS-Teja/clean-mind/releases/latest"><span data-name="dmg">CleanMind-1.2.0-macos.dmg</span></a>
+              <span class="dl-size" data-size="dmg"></span>
+              <span class="dl-note">— unsigned; first launch is right-click&nbsp;→&nbsp;Open.</span>
+            </p>
           </div>
         </article>
 
         <!-- Windows -->
-        <article class="dl-card reveal" data-os="windows">
-          <div class="dl-top">
-            <div class="dl-os">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v6.7H3V5.5zm0 13 7.2 1v-6.6H3v5.6zM11 4.3 21 3v8.2H11V4.3zm0 15.4L21 21v-8.1H11v6.8z"/></svg>
-              <div><h3>Windows</h3><span class="dl-sub">Windows 10 &amp; 11 · x64</span></div>
-            </div>
-            <span class="dl-flag">Experimental</span>
+        <article class="dl-row reveal" id="dl-win">
+          <div class="dl-os">
+            <h3>Windows</h3>
+            <p class="mono">10&nbsp;&amp;&nbsp;11<br/>x64&nbsp;&amp;&nbsp;arm64</p>
           </div>
-          <div class="dl-body">
-            <p class="dl-lead">A portable build — extract the zip and run <code>clean_mind.exe</code>. Deletions go to the Recycle Bin.</p>
-            <a class="btn btn-primary dl-primary" data-dl="windows" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-              <span>Download for Windows</span>
-            </a>
-            <div class="dl-meta"><span class="dl-file" data-file="windows">.zip · x64</span><span class="dl-size" data-size="windows"></span></div>
-            <p class="dl-note">If SmartScreen warns, choose <b>More info → Run anyway</b>.</p>
+          <div class="dl-main">
+            <p class="dl-rec mono">recommended — scoop</p>
+            <div class="cmd mono">
+              <span class="cmd-prompt" aria-hidden="true">&gt;</span>
+              <code class="two-line">scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
+scoop install clean-mind</code>
+              <button type="button" class="copy mono" data-copy="scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind; scoop install clean-mind" aria-label="Copy the Scoop install commands">copy</button>
+            </div>
+            <p class="dl-alt mono">or portable zips:
+              <a data-dl="win-x64" href="https://github.com/MS-Teja/clean-mind/releases/latest">x64</a> <span class="dl-size" data-size="win-x64"></span> ·
+              <a data-dl="win-arm64" href="https://github.com/MS-Teja/clean-mind/releases/latest">arm64</a> <span class="dl-size" data-size="win-arm64"></span>
+              <span class="dl-note">— extract and run <code>clean_mind.exe</code>; if SmartScreen warns, More&nbsp;info&nbsp;→&nbsp;Run&nbsp;anyway.</span>
+            </p>
           </div>
         </article>
 
         <!-- Linux -->
-        <article class="dl-card reveal" data-os="linux">
-          <div class="dl-top">
-            <div class="dl-os">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c-1.7 0-3 1.6-3 3.4 0 1 .1 1.7.1 2.4 0 .7-.7 1.4-1.4 2.5C6.8 11.9 6 13.2 6 14.7c0 .4-.5.7-.9 1.2-.4.5-.7 1.1-.3 1.9.2.4 0 .8 0 1.2 0 .6.5 1 1.2 1.1.7.1 1.6.1 2.4.5.9.4 1.7.6 2.3.6.6 0 1.4-.2 2.3-.6.8-.4 1.7-.4 2.4-.5.7-.1 1.2-.5 1.2-1.1 0-.4-.2-.8 0-1.2.4-.8.1-1.4-.3-1.9-.4-.5-.9-.8-.9-1.2 0-1.5-.8-2.8-1.7-4.4-.7-1.1-1.4-1.8-1.4-2.5 0-.7.1-1.4.1-2.4C15 3.6 13.7 2 12 2zm-1.5 3.2c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zm3 0c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zM12 8.3c.8 0 1.9.5 1.9.9 0 .2-.6.5-1.1.7-.3.2-.6.4-.8.4-.2 0-.6-.2-.9-.4-.5-.2-1.1-.5-1.1-.7 0-.4 1.2-.9 2-.9z"/></svg>
-              <div><h3>Linux</h3><span class="dl-sub">x64 · requires GTK 3</span></div>
-            </div>
-            <span class="dl-flag">Experimental</span>
+        <article class="dl-row reveal" id="dl-linux">
+          <div class="dl-os">
+            <h3>Linux</h3>
+            <p class="mono">GTK&nbsp;3<br/>amd64&nbsp;&amp;&nbsp;arm64</p>
           </div>
-          <div class="dl-body">
-            <p class="dl-lead">Extract the tarball, then run <code>./clean-mind/install.sh</code> (user-level, no root) or the binary directly.</p>
-            <a class="btn btn-primary dl-primary" data-dl="linux" href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-              <span>Download for Linux</span>
-            </a>
-            <div class="dl-meta"><span class="dl-file" data-file="linux">.tar.gz · x64</span><span class="dl-size" data-size="linux"></span></div>
-            <p class="dl-note">Run in place with <code>./clean-mind/clean_mind</code>.</p>
+          <div class="dl-main">
+            <p class="dl-rec mono">recommended — .deb (debian · ubuntu · kali · mint)</p>
+            <div class="cmd mono">
+              <span class="cmd-prompt" aria-hidden="true">$</span>
+              <code>sudo apt install ./<span data-name="deb-amd64">clean-mind_1.2.0_amd64.deb</span></code>
+              <button type="button" class="copy mono" aria-label="Copy the apt install command">copy</button>
+            </div>
+            <p class="dl-alt mono">get the .deb:
+              <a data-dl="deb-amd64" href="https://github.com/MS-Teja/clean-mind/releases/latest">amd64</a> <span class="dl-size" data-size="deb-amd64"></span> ·
+              <a data-dl="deb-arm64" href="https://github.com/MS-Teja/clean-mind/releases/latest">arm64</a> <span class="dl-size" data-size="deb-arm64"></span>
+            </p>
+            <p class="dl-alt mono">everything else — tarball + <code>install.sh</code> (user-level, no root):
+              <a data-dl="tgz-x64" href="https://github.com/MS-Teja/clean-mind/releases/latest">x64</a> <span class="dl-size" data-size="tgz-x64"></span> ·
+              <a data-dl="tgz-arm64" href="https://github.com/MS-Teja/clean-mind/releases/latest">arm64</a> <span class="dl-size" data-size="tgz-arm64"></span>
+            </p>
           </div>
         </article>
       </div>
 
-      <p class="dl-foot">
-        Every build, including checksums, lives on the
-        <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">latest release page</a>.
-      </p>
+      <p class="dl-foot mono reveal">every build + checksums: <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">github.com/MS-Teja/clean-mind/releases</a></p>
     </div>
   </section>
 
-  <!-- ===================== FINAL CTA ===================== -->
-  <section>
-    <div class="wrap">
-      <div class="final reveal">
-        <img src="logo.png" alt="Clean Mind" />
-        <h2>Reclaim your disk with a clear conscience.</h2>
-        <p>Free and open source. See what fills your disk, understand what's safe, and send it to the Trash — never automatically.</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="#download">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-            Download Clean Mind
-          </a>
-          <a class="btn btn-ghost" href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2c-3.34.72-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.77-1.34-1.77-1.1-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.84 2.8 1.3 3.49.99.11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.32.47-2.39 1.24-3.23-.13-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z"/></svg>
-            Star on GitHub
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== FOOTER ===================== -->
-  <footer>
-    <div class="wrap">
-      <div class="foot-grid">
-        <div>
-          <div class="foot-brand"><img src="logo.png" alt="" /> Clean Mind</div>
-          <p class="foot-tag">An open-source disk usage analyzer built for developers. Rust core, Flutter UI.</p>
-        </div>
-        <div class="foot-cols">
-          <div class="foot-col">
-            <h5>Product</h5>
-            <a href="#features">Features</a>
-            <a href="#how">How it works</a>
-            <a href="#trust">Trust model</a>
-            <a href="#download">Download</a>
-          </div>
-          <div class="foot-col">
-            <h5>Project</h5>
-            <a href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">GitHub</a>
-            <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">Releases</a>
-            <a href="https://github.com/MS-Teja/clean-mind/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
-            <a href="https://github.com/MS-Teja/clean-mind/issues" target="_blank" rel="noopener">Report an issue</a>
-          </div>
-        </div>
-      </div>
-      <div class="foot-bottom">
-        <span>© 2025 Clean Mind · Apache-2.0</span>
-        <span>Rust · Flutter · flutter_rust_bridge</span>
+  <!-- ============ COLOPHON ============ -->
+  <footer class="colophon">
+    <div class="page">
+      <p class="closing poster reveal" aria-hidden="true">clean<em>.</em></p>
+      <div class="colo-grid mono">
+        <span>© 2025–2026 · Apache-2.0 · built by Siva&nbsp;Teja&nbsp;Mutyala</span>
+        <nav aria-label="Project links">
+          <a href="https://github.com/MS-Teja/clean-mind" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/MS-Teja/clean-mind/releases/latest" target="_blank" rel="noopener">releases</a>
+          <a href="https://github.com/MS-Teja/clean-mind/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">contributing</a>
+        </nav>
+        <span>no telemetry · no account · no bundled inference</span>
       </div>
     </div>
   </footer>
+  </main>
 
-  <script type="module" src="scene.js"></script>
+  <script type="module" src="figure.js"></script>
   <script src="site.js"></script>
 </body>
 </html>
