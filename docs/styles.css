@@ -116,6 +116,7 @@ img, svg { max-width: 100%; }
   color: var(--ink-55);
 }
 .meta-row span:first-child { color: var(--ink); font-weight: 600; }
+.meta-row span:not(:last-child)::after { content: " ·"; color: var(--ink-38); font-weight: 400; }
 
 .mast-grid {
   display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
@@ -430,6 +431,11 @@ html.js .mast-fig .axo-labels { opacity: 0; animation: lbl-in 0.6s ease 0.9s for
 .dl-rec { color: var(--mint-ink); font-weight: 600; margin-bottom: 12px; }
 .dl-main .cmd { max-width: 760px; }
 .dl-alt { margin-top: 13px; font-size: 0.8rem; color: var(--ink-55); line-height: 2; }
+.dl-note-line {
+  margin-top: 6px; max-width: 58em;
+  font-size: 0.85rem; line-height: 1.6; color: var(--ink-55);
+}
+.dl-note-line code { color: var(--ink); }
 .dl-alt a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--hair); }
 .dl-alt a:hover { text-decoration-color: var(--mint-ink); color: var(--mint-ink); }
 .dl-size { color: var(--ink-38); }
@@ -487,6 +493,13 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .rh-nav a:nth-child(1), .rh-nav a:nth-child(2), .rh-nav a:nth-child(3) { display: none; }
   .rh-ver { display: none; }
   .plate-grid { grid-template-columns: minmax(0, 1fr); }
+
+  /* fig. 01 caption: two clean lines instead of a ragged run-on */
+  .mast-fig .cap-a, .mast-fig .cap-b { display: block; }
+  .mast-fig .cap-sep { display: none; }
+
+  /* terminal commands wrap instead of clipping */
+  .cmd code, .cmd code.two-line { white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* masthead: tighter, edge-to-edge CTA, smaller figure */
   .poster { font-size: clamp(2.7rem, 12.5vw, 3.4rem); }
