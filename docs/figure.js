@@ -208,8 +208,8 @@ import * as THREE from "./vendor/three.module.js";
     camera.lookAt(0, c.ty, 0);
     camera.updateProjectionMatrix();
 
-    // per-block state
-    const riseT = clamp01(u / 0.9);              // rise completes early in 02a
+    // per-block state — the rise gets a head start so the scene is never empty
+    const riseT = clamp01(0.3 + u / 0.75);       // "mid-scan" at entry, done early in 02a
     const classifyT = clamp01(u - 2);            // 0→1 across 02c
     const cleanT = clamp01(u - 3);               // 0→1 across 02d
 
@@ -224,8 +224,8 @@ import * as THREE from "./vendor/three.module.js";
       let lift = 0, fade = 1;
       if (b.it.tier === "safe" && cleanT > 0) {
         const ft = clamp01((cleanT - b.stagger * 0.25) / 0.7);
-        lift = easeInOut(ft) * 13;
-        fade = 1 - clamp01(ft * 1.25);
+        lift = easeInOut(ft) * 10;
+        fade = 1 - clamp01(ft * 1.5);
       }
       b.mesh.position.set(b.base.x, (b.h * sy) / 2 + lift, b.base.z);
 

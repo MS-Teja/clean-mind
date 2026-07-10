@@ -503,15 +503,31 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .sec-head { gap: 14px; }
   .sec-side { display: none; }
   .sec-lede { margin-top: 22px; }
-  .editorial { font-size: clamp(1.3rem, 5.8vw, 1.5rem); }
-  .stat-big { font-size: 2.5rem; }
+
+  /* §01: body-scale editorial + one compact stat row instead of the caps block */
+  .editorial { font-size: 1.15rem; line-height: 1.55; }
+  .margin-note { display: flex; align-items: baseline; gap: 14px; padding-top: 18px; }
+  .stat-big { font-size: 2rem; flex: none; }
+  .stat-cap { margin-top: 0; text-transform: none; letter-spacing: 0.02em; font-size: 0.78rem; line-height: 1.55; }
+
+  /* §02: rail sits close under the step text */
+  .steps { min-height: 235px; }
+  .step { inset: 0 0 44px 0; }
+  .stage-grid { gap: 12px; }
+
+  /* §03: T-number shares the line with the tier name; no deep indent */
+  .tier-row { grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; padding: 22px 0 22px 12px; }
+  .tier-row.t1 { padding-left: 9px; }
+  .tier-no { font-size: 1rem; padding-top: 4px; }
+  .tier-def h3 { font-size: 1.15rem; }
+  .tier-act { grid-column: 2; padding-top: 4px; }
+
+  /* §04: number + heading on one line, body text full-width */
+  .p-row { grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; padding: 18px 0; }
+  .p-row p { grid-column: 1 / -1; margin-top: 6px; }
   .poster-2 { font-size: clamp(1.9rem, 8.4vw, 2.4rem); }
   #privacy .poster-2 { margin-top: 26px; }
-  .tier-row { padding: 24px 0 24px 15px; gap: 14px; }
-  .tier-row.t1 { padding-left: 12px; }
-  .tier-no { font-size: 1.15rem; }
   .privacy-rows { margin-top: 30px; }
-  .p-row { padding: 20px 0; grid-template-columns: 44px minmax(0, 1fr); }
   .ledger { margin-top: 26px; }
   .wedge { margin-top: 28px; }
   .ticker { margin-top: 36px; }
@@ -528,7 +544,6 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .ledger-head, .ledger-row { grid-template-columns: 1fr; gap: 4px; }
   .ledger-head span:last-child { display: none; }
   .ledger-row .pseudo::before { content: "→ "; color: var(--ink-38); }
-  .steps { min-height: 330px; }
 }
 
 /* ---------------- Reduced motion ---------------- */
