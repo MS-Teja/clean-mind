@@ -1,0 +1,50 @@
+name: Bug report
+description: Something broke or behaved wrong
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Clean Mind version
+      placeholder: "1.2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows (x64)
+        - Windows (arm64)
+        - Linux (x64)
+        - Linux (arm64)
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Homebrew cask
+        - Scoop
+        - .deb package
+        - Tarball / install.sh
+        - DMG
+        - Windows zip
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead? Screenshots welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else?
+      description: OS version, the folder you were scanning (if relevant — no need to share personal paths), error text, crash logs.
