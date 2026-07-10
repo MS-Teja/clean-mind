@@ -238,6 +238,18 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
+      # Flutter's Release output doesn't include the VC++ runtime, so the app
+      # fails to launch on machines without the redistributable installed.
+      # Both runners are native for their arch, so System32 has the right DLLs.
+      - name: Bundle VC++ runtime DLLs
+        shell: pwsh
+        run: |
+          $release = "build\windows\${{ matrix.arch }}\runner\Release"
+          foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            Copy-Item "$env:SystemRoot\System32\$dll" $release
+          }
+          Get-ChildItem $release -Filter *.dll | Select-Object -ExpandProperty Name
+
       - name: Package zip
         shell: pwsh
         run: |
