@@ -63,7 +63,7 @@ jobs:
           ln -s /Applications staging/Applications
           hdiutil create -volname "Clean Mind" -srcfolder staging -ov -format UDZO "CleanMind-${VERSION}-macos.dmg"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-dmg
           path: CleanMind-*-macos.dmg
@@ -130,7 +130,7 @@ jobs:
           install -m 755 packaging/linux/install.sh staging/clean-mind/
           tar -czf "CleanMind-${VERSION}-linux-${{ matrix.arch }}.tar.gz" -C staging clean-mind
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-tarball-${{ matrix.arch }}
           path: CleanMind-*-linux-*.tar.gz
@@ -188,7 +188,7 @@ jobs:
 
           dpkg-deb --build --root-owner-group "$root" "clean-mind_${VERSION}_${DEB_ARCH}.deb"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-deb-${{ matrix.arch }}
           path: clean-mind_*_*.deb
@@ -255,7 +255,7 @@ jobs:
         run: |
           Compress-Archive -Path "build\windows\${{ matrix.arch }}\runner\Release\*" -DestinationPath "CleanMind-${env:VERSION}-windows-${{ matrix.arch }}.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-zip-${{ matrix.arch }}
           path: CleanMind-*-windows-*.zip
