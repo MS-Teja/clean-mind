@@ -151,13 +151,19 @@ impl ProgressCounters {
     }
 }
 
+/// Shard count for the hardlink-dedup set. Power of two so the shard pick is
+/// a mask; 32 is plenty to keep rayon workers from serializing on one lock
+/// when a tree is hardlink-heavy (pnpm stores, Homebrew cellars).
+const HARDLINK_SHARDS: usize = 32;
+
 struct ScanCtx<'a> {
     rules: &'a RuleSet,
     progress: &'a ProgressCounters,
     // Hardlink dedup keys on (dev, inode), which only exist on Unix; the
     // field is unread elsewhere but kept so construction stays uniform.
+    // Sharded by inode so parallel workers contend per-shard, not globally.
     #[cfg_attr(not(unix), allow(dead_code))]
-    hardlinks: Mutex<HashSet<(u64, u64)>>,
+    hardlinks: [Mutex<HashSet<(u64, u64)>>; HARDLINK_SHARDS],
 }
 
 struct TmpNode {
@@ -199,7 +205,7 @@ pub fn scan(root: &Path, rules: RuleSet, progress: &ProgressCounters) -> ScanSto
     let ctx = ScanCtx {
         rules: &rules,
         progress,
-        hardlinks: Mutex::new(HashSet::new()),
+        hardlinks: std::array::from_fn(|_| Mutex::new(HashSet::new())),
     };
     let root_mtime = fs::symlink_metadata(root)
         .map(|m| mtime_of(&m))
@@ -383,7 +389,8 @@ fn walk(
             use std::os::unix::fs::MetadataExt;
             if meta.nlink() > 1 {
                 let key = (meta.dev(), meta.ino());
-                if !ctx.hardlinks.lock().unwrap().insert(key) {
+                let shard = &ctx.hardlinks[key.1 as usize & (HARDLINK_SHARDS - 1)];
+                if !shard.lock().unwrap().insert(key) {
                     size = 0; // already counted through another link
                     logical = 0;
                 }
@@ -745,6 +752,32 @@ mod tests {
         let store = scan_fixture(root);
         let root_node = store.node(store.root).unwrap();
         assert!(root_node.size < 6_000_000, "hardlinked file double-counted");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn multiple_hardlink_groups_each_counted_once() {
+        // Distinct inodes land in distinct dedup shards; every group must
+        // still be counted exactly once.
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_bytes(&root.join("a.bin"), 3_000_000);
+        fs::hard_link(root.join("a.bin"), root.join("a2.bin")).unwrap();
+        write_bytes(&root.join("b.bin"), 2_000_000);
+        fs::hard_link(root.join("b.bin"), root.join("b2.bin")).unwrap();
+        fs::hard_link(root.join("b.bin"), root.join("b3.bin")).unwrap();
+
+        let store = scan_fixture(root);
+        let root_node = store.node(store.root).unwrap();
+        assert!(
+            root_node.size < 6_000_000,
+            "a hardlink group was double-counted (root size {})",
+            root_node.size
+        );
+        assert_eq!(
+            root_node.file_count, 5,
+            "every link still appears as a file"
+        );
     }
 
     #[test]
