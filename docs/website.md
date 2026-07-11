@@ -10,10 +10,11 @@ truthful. When a feature or install path changes, this file, the README, and
 - **Name:** Clean Mind
 - **Logo:** `docs/logo.png`
 - **One-liner:** See what fills your disk — and understand what's safe to reclaim.
-- **Elevator pitch:** A free, open-source, cross-platform disk analyzer built
-  for developers. It doesn't just show a chart — it recognizes regenerable
-  developer junk (`node_modules`, build caches, `.venv`s), explains *why* each
-  item is safe to delete, and shows the exact command that rebuilds it.
+- **Elevator pitch:** A free, open-source, cross-platform disk analyzer. It
+  doesn't just show a chart — it tells you what's safe to delete, *why*, and
+  the exact command that rebuilds it. It goes deepest on a developer's disk
+  (`node_modules`, build caches, `.venv`s), where the agentic-coding era piles
+  up regenerable junk faster than ever.
 - **Voice:** calm, technical, honest. No hype, no fake urgency.
 - **Terminology:** always "pseudonymize folder names" (never "redact");
   tiers are "Safe · regenerable", "Review", "Protected".
@@ -44,7 +45,7 @@ like a document (§01–§07) and figures are captioned (`fig. 01`, `plate II`).
    BYO key or local Ollama, metadata only, keys in the OS keychain, and the
    pseudonymization ledger (`dir-1`, `dir-2`, … — structural names like
    `node_modules` stay readable).
-6. **§05 Plates** — `demo.gif` plus the two screenshots, captioned.
+6. **§05 Plates** — `demo.mp4` (looping, muted) plus the two screenshots, captioned.
 7. **§06 In one line** — "The DaisyDisk idea — free, cross-platform, and it
    actually understands a developer's disk", over a ticker of recognized
    artifacts.
@@ -76,10 +77,11 @@ the releases page as the no-JS fallback.
 ## Assets
 
 - `docs/logo.png` — app icon (used in the running head, masthead, favicon)
-- `docs/demo.gif` — scan → treemap → insights → move to Trash
+- `docs/demo.mp4` — scan → treemap → insights → move to Trash (site plate I)
+- `docs/demo.gif` — same demo as a gif; kept for the GitHub README
 - `docs/screenshot-treemap.png`, `docs/screenshot-insights.png`
 - `docs/fonts/` — self-hosted Space Grotesk + JetBrains Mono
-- `docs/vendor/three.module.js` — vendored Three.js for the §02 figure
+- `docs/vendor/three.module.js` — vendored Three.js (minified) for the §02 figure
 
 ## Build notes
 

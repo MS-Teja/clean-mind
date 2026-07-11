@@ -20,16 +20,7 @@ brew install --cask MS-Teja/clean-mind/clean-mind
 
 </div>
 
-Clean Mind is an open-source disk usage analyzer built for developers, in the spirit of OmniDiskSweeper and DaisyDisk — except it doesn't stop at showing *what* takes space. It recognizes developer bloat — package caches, build artifacts, stale `node_modules`, old simulators — explains *why* each item can go, and shows the exact command that brings it back. The agentic-coding era makes this matter more than ever: spin up a few throwaway repos a day with a coding agent and you accumulate `node_modules`, build caches, and `.venv`s faster than you can track them. Almost all of it is regenerable; the hard part is knowing which.
-
-## 🔒 Your disk is your business
-
-Privacy isn't a settings toggle here — it's the architecture:
-
-- **Everything runs on your machine.** No telemetry, no account, no bundled inference, no background service. Scan results live only in memory; nothing is cached to disk.
-- **AI is strictly opt-in, and it's *your* AI.** Bring your own Anthropic or OpenAI-compatible key, or run fully local with Ollama. It only ever sees directory *metadata* — names, sizes, ages — never file contents.
-- **Pseudonymization goes further:** turn it on and the model doesn't even learn your folder names. Personal names become `dir-1`, `dir-2`, … before anything leaves your machine (structural names like `node_modules` stay readable so the analysis still works), and answers are mapped back to your real folders locally.
-- **API keys live in the operating system keychain** — never in config files.
+Clean Mind is a fast, private, open-source disk analyzer in the spirit of DaisyDisk and OmniDiskSweeper — except it doesn't stop at showing *what* takes space. It tells you what's safe to delete, *why*, and the exact command that brings each item back. It goes deepest on a developer's disk — package caches, build artifacts, stale `node_modules`, old simulators — and the agentic-coding era makes that matter more than ever: spin up a few throwaway repos a day with a coding agent and you accumulate `node_modules`, build caches, and `.venv`s faster than you can track them. Almost all of it is regenerable; the hard part is knowing which.
 
 ![Clean Mind in action: scan, treemap, insights, move to Trash](docs/demo.gif)
 
@@ -44,6 +35,15 @@ The trust model has three tiers, and the LLM is never trusted on its own:
 3. **Protected** — a hard denylist (documents, photos, `.ssh`, system paths…) that neither rules nor AI can override.
 
 Deletions go to the OS Trash and are recoverable; permanent delete exists only behind a type-to-confirm gate. Nothing is ever deleted automatically.
+
+## 🔒 Your disk is your business
+
+Privacy isn't a settings toggle here — it's the architecture:
+
+- **Everything runs on your machine.** No telemetry, no account, no bundled inference, no background service. Scan results live only in memory; nothing is cached to disk.
+- **AI is strictly opt-in, and it's *your* AI.** Bring your own Anthropic or OpenAI-compatible key, or run fully local with Ollama. It only ever sees directory *metadata* — names, sizes, ages — never file contents.
+- **Pseudonymization goes further:** turn it on and the model doesn't even learn your folder names. Personal names become `dir-1`, `dir-2`, … before anything leaves your machine (structural names like `node_modules` stay readable so the analysis still works), and answers are mapped back to your real folders locally.
+- **API keys live in the operating system keychain** — never in config files.
 
 ## ⚡ Native on every desktop
 

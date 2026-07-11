@@ -260,7 +260,9 @@ import * as THREE from "./vendor/three.module.js";
       v.set(b.base.x, b.mesh.position.y + (b.h * b.mesh.scale.y) / 2, b.base.z);
       v.project(camera);
       L.el.style.left = ((v.x * 0.5 + 0.5) * 100).toFixed(2) + "%";
-      L.el.style.top = ((-v.y * 0.5 + 0.5) * 100).toFixed(2) + "%";
+      /* clamp so the label never leaves the overflow-hidden box */
+      const topPx = (-v.y * 0.5 + 0.5) * height;
+      L.el.style.top = Math.max(topPx, L.el.offsetHeight + 2).toFixed(1) + "px";
     });
   }
 

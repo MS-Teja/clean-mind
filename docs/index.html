@@ -4,20 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clean Mind — reclaim your disk, safely</title>
-  <meta name="description" content="Clean Mind is a free, open-source disk analyzer for developers. It recognizes regenerable junk — node_modules, build caches, .venvs — explains why each item is safe to delete, and shows the exact command that rebuilds it. Private by design: no telemetry, no account, AI strictly opt-in." />
+  <meta name="description" content="Clean Mind is a free, open-source disk analyzer that tells you what's safe to delete, why, and the exact command that rebuilds it. It goes deepest on a developer's disk — node_modules, build caches, .venvs. Private by design: no telemetry, no account, AI strictly opt-in." />
   <meta name="theme-color" content="#fafaf7" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="logo.png" />
 
+  <link rel="canonical" href="https://ms-teja.github.io/clean-mind/" />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ms-teja.github.io/clean-mind/" />
   <meta property="og:title" content="Clean Mind — reclaim your disk, safely" />
-  <meta property="og:description" content="A free, open-source disk analyzer that understands a developer's disk. It finds regenerable junk, tells you why it's safe to delete, and shows the command to get it back. No telemetry, no account." />
-  <meta property="og:image" content="screenshot-treemap.png" />
+  <meta property="og:description" content="A free, open-source disk analyzer that tells you what's safe to delete, why, and the command to get it back. Goes deepest on a developer's disk. No telemetry, no account." />
+  <meta property="og:image" content="https://ms-teja.github.io/clean-mind/screenshot-treemap.png" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://ms-teja.github.io/clean-mind/screenshot-treemap.png" />
 
   <link rel="preload" href="fonts/SpaceGrotesk-Bold.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="preload" href="fonts/JetBrainsMono-Regular.ttf" as="font" type="font/ttf" crossorigin />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2" />
   <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
@@ -48,7 +51,7 @@
       <div class="mast-grid">
         <div class="mast-copy">
           <h1 class="poster">Reclaim your&nbsp;disk, <em>safely.</em></h1>
-          <p class="abstract"><span class="mono abstract-tag">Abstract&nbsp;—&nbsp;</span>A free, open-source disk analyzer for developers. It doesn't just chart your disk — it recognizes regenerable junk (<code>node_modules</code>, build caches, <code>.venv</code>s), explains why each item is safe to delete, and shows the exact command that rebuilds it.</p>
+          <p class="abstract"><span class="mono abstract-tag">Abstract&nbsp;—&nbsp;</span>A free, open-source disk analyzer that doesn't just chart your disk — it tells you what's safe to delete, why, and the exact command that rebuilds it. It goes deepest on a developer's disk (<code>node_modules</code>, build caches, <code>.venv</code>s).</p>
 
           <div class="cta-strip">
             <a class="btn-dl mono" href="#download">Download&nbsp;—&nbsp;free&nbsp;↓</a>
@@ -294,7 +297,7 @@
     </header>
     <div class="page">
       <figure class="plate plate-wide reveal">
-        <img src="demo.gif" alt="Clean Mind demo: scanning a folder, exploring the treemap, reading the insights panel, and moving reclaimable items to the Trash." loading="lazy" />
+        <video src="demo.mp4" autoplay loop muted playsinline preload="metadata" width="1000" height="640" aria-label="Clean Mind demo: scanning a folder, exploring the treemap, reading the insights panel, and moving reclaimable items to the Trash."></video>
         <figcaption class="mono"><span class="fig-id">plate&nbsp;I</span> — scan → treemap → insights → Trash, in motion.</figcaption>
       </figure>
       <div class="plate-grid">
@@ -426,7 +429,7 @@ scoop install clean-mind</code>
   </footer>
   </main>
 
-  <script type="module" src="figure.js"></script>
-  <script src="site.js"></script>
+  <script type="module" src="figure.js?v=2"></script>
+  <script src="site.js?v=2"></script>
 </body>
 </html>
