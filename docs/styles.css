@@ -493,7 +493,7 @@ html.js .reveal.in { opacity: 1; transform: none; }
   .stage-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 30px;
-    padding-block: 18px 24px;
+    padding-block: 40px 24px;
   }
   .fig3d { order: -1; height: min(44vh, 420px); }
   /* Only the active step sits in normal flow, so the steps box hugs whichever
