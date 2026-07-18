@@ -96,15 +96,15 @@ scoop install clean-mind
 
 Or download the `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X) zip, extract, and run `clean_mind.exe`. If SmartScreen warns: **More info → Run anyway**.
 
-**Linux — Debian/Ubuntu/Kali/Mint:**
-
-First download the `.deb` for your CPU from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest): `amd64` for Intel/AMD, `arm64` for Arm — including VMs on an Apple-silicon Mac. Not sure which? Run `dpkg --print-architecture`. Then, from the folder you downloaded it to:
+**Linux:**
 
 ```sh
-sudo apt install ./clean-mind_<version>_<arch>.deb   # your downloaded file's name; keep the ./
+curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh
 ```
 
-Other distros: download and extract the `linux-x64` or `linux-arm64` tarball, then run `./clean-mind/install.sh` for a per-user install (launcher entry + icon, no root), or launch `./clean-mind/clean_mind` directly. Requires GTK 3.
+The installer detects your CPU and picks the right install: the `.deb` on Debian/Ubuntu/Kali/Mint (launcher entry + `clean-mind` command; apt asks for sudo), or a per-user tarball install on other distros (no root). Requires GTK 3.
+
+Prefer manual? Grab the `.deb` (`amd64`/`arm64` — run `dpkg --print-architecture` if unsure) from the [latest release](https://github.com/MS-Teja/clean-mind/releases/latest) and `sudo apt install ./clean-mind_<version>_<arch>.deb`, or extract the `linux-x64`/`linux-arm64` tarball and run `./clean-mind/install.sh` (or launch `./clean-mind/clean_mind` directly).
 
 All three platforms are tested and supported — bug reports are welcome everywhere.
 

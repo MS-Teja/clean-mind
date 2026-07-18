@@ -65,10 +65,14 @@ like a document (§01–§07) and figures are captioned (`fig. 01`, `plate II`).
   then `scoop install clean-mind`.
   Alternative: portable zips — x64 (Intel/AMD) or arm64 (Snapdragon X);
   extract and run `clean_mind.exe`. SmartScreen: More info → Run anyway.
-- **Linux — Debian/Ubuntu/Kali/Mint:**
-  `sudo apt install ./clean-mind_<version>_amd64.deb` (or `_arm64.deb`).
-  Other distros: `linux-x64` / `linux-arm64` tarball with `install.sh`
-  (per-user, no root) or run the binary directly. Requires GTK 3.
+- **Linux — one-line installer (recommended):**
+  `curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh`
+  (script lives at `docs/install.sh`, served by GitHub Pages; detects the
+  CPU, installs the .deb on Debian-family distros, per-user tarball
+  elsewhere). Alternatives: the `.deb` via
+  `sudo apt install ./clean-mind_<version>_<arch>.deb`, or the
+  `linux-x64` / `linux-arm64` tarball with `install.sh` (per-user, no
+  root) or run the binary directly. Requires GTK 3.
 
 All platforms ship x64 and arm64. The download section resolves the latest
 release (version, direct links, sizes) from the GitHub API at page load, with

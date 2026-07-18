@@ -13,13 +13,17 @@ This free app is not notarized (there is no paid Apple Developer account behind 
 - Terminal alternative: `xattr -d com.apple.quarantine "/Applications/Clean Mind.app"`
 
 ### Linux
-On Debian/Ubuntu/Kali/Pop!_OS/Mint: **first download** the `.deb` for your CPU from the assets below — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, VMs on Apple-silicon Macs; not sure, run `dpkg --print-architecture`). Then install it from the folder you downloaded it to (keep the `./` — it tells apt this is a local file):
+Easiest via the one-line installer — it detects your CPU and installs the latest release:
+```
+curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh
+```
+On Debian/Ubuntu/Kali/Pop!_OS/Mint that installs the `.deb` (launcher entry + a `clean-mind` command; GTK 3 pulled in automatically). On other distros it does a per-user tarball install (launcher entry + icon, no root needed).
+
+Prefer manual? Download the `.deb` for your CPU from the assets below — `amd64` (Intel/AMD) or `arm64` (Raspberry Pi 5, Ampere, VMs on Apple-silicon Macs; not sure, run `dpkg --print-architecture`) — then, from the folder you downloaded it to (keep the `./`):
 ```
 sudo apt install ./clean-mind_<version>_arm64.deb   # or _amd64.deb
 ```
-This adds a launcher entry and a `clean-mind` command. Requires GTK 3 (pulled in automatically).
-
-No root, or not on a Debian-based distro? Download the `linux-x64`/`linux-arm64` tarball instead, extract it, then either run `./clean-mind/clean_mind` directly or run `./clean-mind/install.sh` to install it for your user (launcher entry + icon, no root needed).
+Or grab the `linux-x64`/`linux-arm64` tarball, extract it, and either run `./clean-mind/clean_mind` directly or `./clean-mind/install.sh` for a per-user install.
 
 ### Windows
 Easiest via [Scoop](https://scoop.sh):

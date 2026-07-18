@@ -390,17 +390,19 @@ scoop install clean-mind</code>
             <p class="mono">GTK&nbsp;3 · amd64&nbsp;&amp;&nbsp;arm64</p>
           </div>
           <div class="dl-main">
-            <p class="dl-rec mono">recommended — .deb (debian/ubuntu/kali/mint)</p>
+            <p class="dl-rec mono">recommended — one-line installer</p>
             <div class="cmd mono">
               <span class="cmd-prompt" aria-hidden="true">$</span>
-              <code>sudo apt install ./<span data-name="deb-amd64">clean-mind_1.2.1_amd64.deb</span></code>
-              <button type="button" class="copy mono" aria-label="Copy the apt install command">copy</button>
+              <code>curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh</code>
+              <button type="button" class="copy mono" aria-label="Copy the Linux install command">copy</button>
             </div>
-            <p class="dl-alt mono">get the .deb:
+            <p class="dl-note-line">Picks the right build for your CPU: the .deb on Debian/Ubuntu/Kali/Mint, a per-user install elsewhere (no&nbsp;root).</p>
+            <p class="dl-alt mono">or the .deb:
               <a data-dl="deb-amd64" href="https://github.com/MS-Teja/clean-mind/releases/latest">amd64</a> <span class="dl-size" data-size="deb-amd64"></span> ·
               <a data-dl="deb-arm64" href="https://github.com/MS-Teja/clean-mind/releases/latest">arm64</a> <span class="dl-size" data-size="deb-arm64"></span>
+              — then <code>sudo apt install ./&lt;file&gt;.deb</code>
             </p>
-            <p class="dl-alt mono">everything else — tarball + <code>install.sh</code> (user-level, no root):
+            <p class="dl-alt mono">or the tarball + <code>install.sh</code> (user-level, no root):
               <a data-dl="tgz-x64" href="https://github.com/MS-Teja/clean-mind/releases/latest">x64</a> <span class="dl-size" data-size="tgz-x64"></span> ·
               <a data-dl="tgz-arm64" href="https://github.com/MS-Teja/clean-mind/releases/latest">arm64</a> <span class="dl-size" data-size="tgz-arm64"></span>
             </p>
