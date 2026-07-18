@@ -1,11 +1,23 @@
-/// Human-readable byte count using decimal units, matching what Finder and
-/// most OS storage panels report.
-String formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+import 'dart:io' show Platform;
+
+/// Human-readable byte count in the convention of the platform's own tools:
+/// decimal KB/MB/GB on macOS (Finder), 1024-based KB/MB/GB on Windows
+/// (Explorer, storage settings), 1024-based KiB/MiB/GiB on Linux (df, du,
+/// KDE). Anything else would read as "slightly wrong" next to the OS.
+String formatBytes(int bytes) => formatBytesForOs(Platform.operatingSystem, bytes);
+
+/// [formatBytes] with the platform pinned; `os` is a
+/// `Platform.operatingSystem` value. Split out so tests can cover every
+/// platform's convention regardless of the host they run on.
+String formatBytesForOs(String os, int bytes) {
+  final base = os == 'macos' ? 1000 : 1024;
+  final units = os == 'linux'
+      ? const ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+      : const ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   var value = bytes.toDouble();
   var unit = 0;
-  while (value >= 1000 && unit < units.length - 1) {
-    value /= 1000;
+  while (value >= base && unit < units.length - 1) {
+    value /= base;
     unit++;
   }
   final digits = value >= 100 || unit == 0 ? 0 : 1;
