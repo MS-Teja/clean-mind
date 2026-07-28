@@ -4,7 +4,12 @@ project(clean_mind LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "clean_mind")
+#
+# Hyphenated so the command winget and Scoop expose on PATH is `clean-mind`,
+# matching the Linux command. Windows portable packages take their command
+# name straight from the file name. Linux keeps clean_mind plus a clean-mind
+# symlink, so its binary name is deliberately left alone.
+set(BINARY_NAME "clean-mind")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

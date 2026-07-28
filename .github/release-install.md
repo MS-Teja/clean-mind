@@ -31,6 +31,6 @@ Easiest via [Scoop](https://scoop.sh):
 scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
 scoop install clean-mind
 ```
-Or download the zip for your CPU from the assets below — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs) — extract it, and run `clean_mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
+Or download the zip for your CPU from the assets below — `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X and other Arm PCs) — extract it, and run `clean-mind.exe`. If SmartScreen warns, click **More info → Run anyway**.
 
 Issue reports for Linux and Windows are very welcome.

@@ -64,7 +64,7 @@ like a document (§01–§07) and figures are captioned (`fig. 01`, `plate II`).
   `scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind`
   then `scoop install clean-mind`.
   Alternative: portable zips — x64 (Intel/AMD) or arm64 (Snapdragon X);
-  extract and run `clean_mind.exe`. SmartScreen: More info → Run anyway.
+  extract and run `clean-mind.exe`. SmartScreen: More info → Run anyway.
 - **Linux — one-line installer (recommended):**
   `curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh`
   (script lives at `docs/install.sh`, served by GitHub Pages; detects the
