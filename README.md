@@ -94,7 +94,7 @@ scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind
 scoop install clean-mind
 ```
 
-Or download the `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X) zip, extract, and run `clean_mind.exe`. If SmartScreen warns: **More info → Run anyway**.
+Or download the `windows-x64` (Intel/AMD) or `windows-arm64` (Snapdragon X) zip, extract, and run `clean-mind.exe`. If SmartScreen warns: **More info → Run anyway**.
 
 **Linux:**
 

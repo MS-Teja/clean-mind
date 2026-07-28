@@ -1,19 +1,28 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
 PackageIdentifier: MS-Teja.CleanMind
-PackageVersion: 1.2.2
+PackageVersion: 1.2.3
 Platform:
   - Windows.Desktop
 InstallerType: zip
 NestedInstallerType: portable
+# clean-mind.exe has load-time imports on flutter_windows.dll, the plugin DLLs
+# and the bundled VC++ runtime, all of which sit beside it in the archive. The
+# default portable behaviour puts a symlink in winget's Links folder and starts
+# the app from there, where the loader cannot find any of them, so the process
+# dies with STATUS_DLL_NOT_FOUND before reaching main. Setting this to true
+# skips the symlink and puts the real install directory on PATH instead, so
+# every sibling DLL resolves. Requires manifest schema >= 1.9.0.
+ArchiveBinariesDependOnPath: true
 NestedInstallerFiles:
-  - RelativeFilePath: clean_mind.exe
-    PortableCommandAlias: clean-mind
+  # No PortableCommandAlias: the mode above creates no symlink, so an alias
+  # would be ignored. The command on PATH is the file name, `clean-mind`.
+  - RelativeFilePath: clean-mind.exe
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.2.2/CleanMind-1.2.2-windows-x64.zip
-    InstallerSha256: BED6BA0FFBAD4CB5B8F9AB04E2A3EDC654E295F722DA3B5EF47A64D43550073A
+    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.2.3/CleanMind-1.2.3-windows-x64.zip
+    InstallerSha256: REPLACE_WITH_SHA256_OF_v1.2.3_x64_ZIP
   - Architecture: arm64
-    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.2.2/CleanMind-1.2.2-windows-arm64.zip
-    InstallerSha256: E08B288526A17A91D02BBD5CA801B8C95DAFB99BE2FFDEF2943D6A69CE627C07
+    InstallerUrl: https://github.com/MS-Teja/clean-mind/releases/download/v1.2.3/CleanMind-1.2.3-windows-arm64.zip
+    InstallerSha256: REPLACE_WITH_SHA256_OF_v1.2.3_arm64_ZIP
 ManifestType: installer
-ManifestVersion: 1.6.0
+ManifestVersion: 1.9.0

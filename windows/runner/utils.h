@@ -16,4 +16,12 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string);
 // encoded in UTF-8. Returns an empty std::vector<std::string> on failure.
 std::vector<std::string> GetCommandLineArguments();
 
+// Returns the absolute path to the "data" directory next to the actual
+// executable file on disk, resolving through any symlink/reparse point used
+// to launch the process. Package managers that install via a symlink (e.g.
+// winget's portable-app "Links" shims) make GetModuleFileName report the
+// symlink's own location instead of the real install directory, which
+// breaks Flutter's default relative-to-executable asset lookup.
+std::wstring GetDataDirectoryPath();
+
 #endif  // RUNNER_UTILS_H_

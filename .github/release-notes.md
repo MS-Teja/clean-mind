@@ -1,6 +1,6 @@
-# What's new in 1.2.2
+# What's new in 1.2.3
 
-- **Correct storage figures on Windows and Linux:** sizes now follow each platform's own convention — 1024-based GB on Windows (matching File Explorer and Settings → Storage) and GiB on Linux (matching `df` and `du`) — instead of the decimal units that only line up with macOS. Free-space readouts and item sizes no longer read slightly high next to the numbers the OS reports itself. macOS is unchanged (decimal, matching Finder).
-- **Simpler Linux install:** a one-line installer now does the work — `curl -fsSL https://ms-teja.github.io/clean-mind/install.sh | sh` detects your CPU and installs the `.deb` on Debian/Ubuntu/Kali/Mint, or a per-user build on other distros. The manual `.deb` and tarball options remain.
+- **Windows: install via winget.** Getting the package accepted needed a change on both sides. The manifest now tells winget to put the install directory on `PATH` rather than launching Clean Mind through a symlink, which is what lets the app find the runtime libraries shipped alongside it. Separately, the app no longer assumes it was started from its own install directory, so it locates its bundled assets correctly when something launches it indirectly.
+- **Windows: the executable is now `clean-mind.exe`** (previously `clean_mind.exe`), so the command on your `PATH` is `clean-mind` — the same name Linux already uses. If you pinned a shortcut, wrote a script, or made a scheduled task pointing at the old file name, update it after upgrading. Nothing changes on macOS or Linux.
 
-The scanning engine and everything else are unchanged since [1.2.1](https://github.com/MS-Teja/clean-mind/releases/tag/v1.2.1).
+The scanning engine and everything else are unchanged since [1.2.2](https://github.com/MS-Teja/clean-mind/releases/tag/v1.2.2).
