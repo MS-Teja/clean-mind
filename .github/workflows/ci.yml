@@ -65,6 +65,37 @@ jobs:
       - name: Build (compiles Rust core via cargokit)
         run: ${{ matrix.build }}
 
+      # A Windows build that links is not the same as one that starts: a
+      # missing sibling DLL or an assets path the engine cannot resolve both
+      # fail at launch, not at link time, and neither shows up in any other
+      # job. Launch from an unrelated working directory, because that is how
+      # the app is started once winget puts its install directory on PATH.
+      - name: Smoke test the Windows build
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem -Recurse -Filter 'clean-mind.exe' `
+            -Path 'build\windows' | Select-Object -First 1
+          if (-not $exe) {
+            throw 'clean-mind.exe was not produced (did BINARY_NAME change?)'
+          }
+          Write-Host "Launching $($exe.FullName) with CWD C:\"
+
+          $p = Start-Process -FilePath $exe.FullName -WorkingDirectory 'C:\' -PassThru
+          Start-Sleep -Seconds 15
+
+          if ($p.HasExited) {
+            $code = '0x{0:X8}' -f $p.ExitCode
+            if ($p.ExitCode -eq 0xC0000135) {
+              throw "Exited $code (STATUS_DLL_NOT_FOUND): a DLL the exe imports is missing from the build output."
+            }
+            throw "Exited $code within 15s; a healthy GUI build stays running."
+          }
+
+          Write-Host 'Still running after 15s.'
+          Stop-Process -Id $p.Id -Force
+
   integration:
     name: Integration tests (Linux)
     runs-on: ubuntu-latest
