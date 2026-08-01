@@ -42,9 +42,10 @@ side effect: with no symlink there is no alias, so the command on `PATH` is
 
 ## Filling in the installer hashes
 
-`MS-Teja.CleanMind.installer.yaml` ships with `REPLACE_WITH_SHA256_...`
-placeholders, because the hashes cannot be known until the release assets are
-built. After the release is published:
+The hashes in `MS-Teja.CleanMind.installer.yaml` cannot be written until the
+release assets exist, so on release day they are updated in a second pass —
+bump the version and URLs with the rest of the release, then come back for
+these once the build has published:
 
 ```sh
 VER=1.2.3
