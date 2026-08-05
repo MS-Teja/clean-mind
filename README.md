@@ -51,7 +51,7 @@ One parallel Rust core and one Flutter UI ship a real desktop app — not a web 
 
 - The rayon-powered scanner walks over a million files in seconds, measures true on-disk size (hardlink- and APFS-clone-aware), and streams progress live.
 - Small install (~60 MB), low memory, zero idle cost: no Electron, no daemon.
-- Each platform gets its own conventions: Trash vs Recycle Bin, per-platform volumes, long-path support on Windows, native installs via Homebrew, Scoop, or `apt`.
+- Each platform gets its own conventions: Trash vs Recycle Bin, per-platform volumes, long-path support on Windows, native installs via Homebrew, Winget, Scoop, or `apt`.
 
 And the explorer you'd expect around it: a squarified drill-down treemap, a sortable list view, whole-scan search, back/forward navigation, and drag-and-drop any folder to scan it.
 
@@ -87,7 +87,13 @@ brew install --cask MS-Teja/clean-mind/clean-mind
 
 Or download the universal DMG and drag **Clean Mind** to Applications. The app isn't notarized, so the first launch needs one extra step — macOS 15+: open once, then **System Settings → Privacy & Security → Open Anyway**; earlier: right-click → **Open**. When macOS asks for folder access on the first scan, that's the normal per-folder prompt; grant **Full Disk Access** for complete results.
 
-**Windows — Scoop (recommended):**
+**Windows — Winget (recommended):**
+
+```sh
+winget install MS-Teja.CleanMind
+```
+
+**Windows — Scoop:**
 
 ```sh
 scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind

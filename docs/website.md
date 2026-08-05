@@ -60,9 +60,9 @@ like a document (§01–§07) and figures are captioned (`fig. 01`, `plate II`).
   macOS 15+ open once, then System Settings → Privacy & Security → Open
   Anyway; earlier versions: right-click → Open. Grant Full Disk Access for
   complete results.
-- **Windows — Scoop (recommended):**
-  `scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind`
-  then `scoop install clean-mind`.
+- **Windows — Winget (recommended):**
+  `winget install MS-Teja.CleanMind`
+  Alternative (Scoop): `scoop bucket add clean-mind https://github.com/MS-Teja/scoop-clean-mind` then `scoop install clean-mind`.
   Alternative: portable zips — x64 (Intel/AMD) or arm64 (Snapdragon X);
   extract and run `clean-mind.exe`. SmartScreen: More info → Run anyway.
 - **Linux — one-line installer (recommended):**
